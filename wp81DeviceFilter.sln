@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wp81DeviceFilter", "wp81DeviceFilter\wp81DeviceFilter.vcxproj", "{7A11DB74-B069-40BB-81F9-962113599C42}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|x86 = Debug|x86
+		Release|ARM = Release|ARM
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Debug|ARM.ActiveCfg = Debug|ARM
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Debug|ARM.Build.0 = Debug|ARM
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Debug|ARM.Deploy.0 = Debug|ARM
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Debug|x86.ActiveCfg = Debug|Win32
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Debug|x86.Build.0 = Debug|Win32
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Debug|x86.Deploy.0 = Debug|Win32
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Release|ARM.ActiveCfg = Release|ARM
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Release|ARM.Build.0 = Release|ARM
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Release|ARM.Deploy.0 = Release|ARM
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Release|x86.ActiveCfg = Release|Win32
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Release|x86.Build.0 = Release|Win32
+		{7A11DB74-B069-40BB-81F9-962113599C42}.Release|x86.Deploy.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
