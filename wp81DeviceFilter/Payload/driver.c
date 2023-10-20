@@ -6,6 +6,9 @@
 
 #include <ntifs.h>
 #include <wdf.h>
+#include <ntstrsafe.h>
+
+#define REQUIRED_ACCESS_FROM_CTL_CODE(ctrlCode)     (((ULONG)(ctrlCode & 0xC000)) >> 14)
 
 typedef struct _DEVICEFILTER_CONTEXT
 {
@@ -30,7 +33,7 @@ FilterRequestCompletionRoutine(
     UNREFERENCED_PARAMETER(Target);
     UNREFERENCED_PARAMETER(Context);
 	
-	DbgPrint("Filter!Completion Request Type=0x%x\n", CompletionParams->Type);
+	DbgPrint("Filter!Completion Request Size=%u Type=0x%x IoStatus.Status=0x%x IoStatus.Information=0x%x\n", CompletionParams->Size, CompletionParams->Type, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
 
     WdfRequestComplete(Request, CompletionParams->IoStatus.Status);
 
@@ -70,6 +73,258 @@ FilterForwardRequestWithCompletionRoutine(
     return;
 }
 
+CHAR* IoControlCodeInfo(ULONG IoControlCode, CHAR* buffer, size_t bufSize)
+{
+	RtlZeroMemory(buffer, bufSize);
+	CHAR unknown[32];
+	CHAR ioctl[16];
+
+	RtlStringCbCatA(buffer, bufSize, "IoControlCode=");
+	switch(IoControlCode)
+	{
+		case 0x220003:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_GET_DEVICEOBJECT");
+			break;
+		case 0x220007:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_DEVICE_GET_KSNODETYPES");
+			break;
+		case 0x22000b:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_DEVICE_GET_CONTAINERID");
+			break;
+		case 0x22000f:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_DEVICE_REQUEST_CONNECT");
+			break;
+		case 0x220013:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_DEVICE_REQUEST_DISCONNECT");
+			break;
+		case 0x220017:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_DEVICE_GET_CONNECTION_STATUS_UPDATE");
+			break;
+		case 0x22001b:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_SPEAKER_SET_VOLUME");
+			break;
+		case 0x22001f:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_SPEAKER_GET_VOLUME_STATUS_UPDATE");
+			break;
+		case 0x220023:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_MIC_SET_VOLUME");
+			break;
+		case 0x220027:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_MIC_GET_VOLUME_STATUS_UPDATE");
+			break;
+		case 0x22002b:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_STREAM_OPEN");
+			break;
+		case 0x22002f:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_STREAM_CLOSE");
+			break;
+		case 0x220033:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_STREAM_GET_STATUS_UPDATE");
+			break;
+		case 0x22003c:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_DEVICE_GET_CODEC_ID");
+			break;
+		case 0x220193:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_DEVICE_GET_DESCRIPTOR");
+			break;
+		case 0x220197:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHHFP_DEVICE_GET_VOLUMEPROPERTYVALUES");
+			break;
+		case 0x410000:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_GET_LOCAL_INFO");
+			break;
+		case 0x410007:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_INTERNAL_BTHENUM_GET_enumInfo");
+			break;
+		case 0x410008:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_GET_DEVICE_INFO");
+			break;
+		case 0x41000c:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_DISCONNECT_DEVICE");
+			break;
+		case 0x4100d8:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_DISCONNECT_DEVICE_EX");
+			break;
+		case 0x4100e4:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_LE_ENTER_ACTIVE_SCANNING");
+			break;
+		case 0x410200:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_SDP_CONNECT");
+			break;
+		case 0x410204:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_SDP_DISCONNECT");
+			break;
+		case 0x410210:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_SDP_SERVICE_ATTRIBUTE_SEARCH");
+			break;
+		case 0x410214:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_SDP_SUBMIT_RECORD");
+			break;
+		case 0x410218:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_SDP_REMOVE_RECORD");
+			break;
+		case 0x41021c:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_SDP_SUBMIT_RECORD_WITH_INFO");
+			break;
+		case 0x411000:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_INQUIRY_DEVICE");
+			break;
+		case 0x411004:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_AUTH_RESPONSE");
+			break;
+		case 0x411008:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_UPDATE_SETTINGS");
+			break;
+		case 0x41100c:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_PERSONALIZE_DEVICE");
+			break;
+		case 0x411010:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_PAIR_DEVICE");
+			break;
+		case 0x411014:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_UNPAIR_DEVICE");
+			break;
+		case 0x411018:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_QUERY_UNPAIR_DEVICE");
+			break;
+		case 0x411020:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_SCAN_ENABLE");
+			break;
+		case 0x411030:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_UPDATE_DEVICE");
+			break;
+		case 0x411038:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_GET_DEVICE_PROTOCOLS_INFO");
+			break;
+		case 0x41104c:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_SET_LOCAL_SERVICE_INFO");
+			break;
+		case 0x411058:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_GET_DEVICE_INFO_EX");
+			break;
+		case 0x41110c:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_UNPAIR_DEVICE_EX");
+			break;
+		case 0x411cc0:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_INITIALIZE_AUDIO_DEVICE");
+			break;
+		case 0x411cc4:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_ALLOW_INCOMING_SCO");
+			break;
+		case 0x411cc8:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_FORBID_INCOMING_SCO");
+			break;
+		case 0x411ccc:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_CONNECT_SCO");
+			break;
+		case 0x411cd0:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_DISCONNECT_SCO");
+			break;
+		case 0x411cd4:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_SET_AUDIO_CONNECTED");
+			break;
+		case 0x411cd8:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_SET_AUDIO_DISCONNECTED");
+			break;
+		case 0x411cdc:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_CHANGE_SPEAKER_VOLUME");
+			break;
+		case 0x411ce0:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_CHANGE_MICROPHONE_VOLUME");
+			break;
+		case 0x411ce4:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_GET_AUDIO_INDICATION");
+			break;
+		case 0x411ce8:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_SET_CODEC_ID");
+			break;
+		case 0x411d00:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_L2CAP_REGISTER");
+			break;
+		case 0x411d04:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_L2CAP_UNREGISTER");
+			break;
+		case 0x411d08:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_L2CAP_LISTEN");
+			break;
+		case 0x411d0c:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_L2CAP_CONNECT");
+			break;
+		case 0x411d10:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_L2CAP_ATTACH");
+			break;
+		case 0x411d14:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_WP8_L2CAP_DISPOSE");
+			break;
+		case 0x414010:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHLEENUM_READ_GATT_EVENT");
+			break;
+		case 0x414014:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHLEENUM_READ_QUEUE_ACTIVATE");
+			break;
+		default:
+			RtlStringCbCatA(buffer, bufSize, "UNKNOWN");		
+	}
+	RtlStringCbPrintfA(ioctl, 16, "(0x%6X) ", IoControlCode);
+	RtlStringCbCatA(buffer, bufSize, ioctl);
+
+	RtlZeroMemory(unknown, 32);
+	ULONG deviceType = DEVICE_TYPE_FROM_CTL_CODE(IoControlCode);
+	switch(deviceType)
+	{
+		case 0x00000041:
+			RtlStringCbCatA(buffer, bufSize, "deviceType=FILE_DEVICE_BLUETOOTH ");
+			break;
+		case 0x00000022:
+			RtlStringCbCatA(buffer, bufSize, "deviceType=FILE_DEVICE_UNKNOWN ");
+			break;
+		default:
+			RtlStringCbPrintfA(unknown, 32, "deviceType=0x%8X ", deviceType);
+			RtlStringCbCatA(buffer, bufSize, unknown);
+	}
+
+	RtlZeroMemory(unknown, 32);
+	ULONG requiredAccess = REQUIRED_ACCESS_FROM_CTL_CODE(IoControlCode);
+	switch(requiredAccess)
+	{
+		case 0x0000:
+			RtlStringCbCatA(buffer, bufSize, "requiredAccess=FILE_ANY_ACCESS ");
+			break;
+		case 0x0001:
+			RtlStringCbCatA(buffer, bufSize, "requiredAccess=FILE_READ_ACCESS ");
+			break;
+		case 0x0002:
+			RtlStringCbCatA(buffer, bufSize, "requiredAccess=FILE_WRITE_ACCESS ");
+			break;
+		default:
+			RtlStringCbPrintfA(unknown, 32, "requiredAccess=0x%4X ", requiredAccess);
+			RtlStringCbCatA(buffer, bufSize, unknown);
+	}	
+
+	RtlZeroMemory(unknown, 32);	
+	ULONG transferType = METHOD_FROM_CTL_CODE(IoControlCode);
+	switch(transferType)
+	{
+		case 0:
+			RtlStringCbCatA(buffer, bufSize, "transferType=METHOD_BUFFERED");
+			break;
+		case 1:
+			RtlStringCbCatA(buffer, bufSize, "transferType=METHOD_IN_DIRECT");
+			break;
+		case 2:
+			RtlStringCbCatA(buffer, bufSize, "transferType=METHOD_OUT_DIRECT");
+			break;
+		case 3:
+			RtlStringCbCatA(buffer, bufSize, "transferType=METHOD_NEITHER");
+			break;			
+		default:
+			RtlStringCbPrintfA(unknown, 32, "transferType=%u", transferType);
+			RtlStringCbCatA(buffer, bufSize, unknown);
+	}
+	
+	return buffer;
+}
+
 VOID
 FilterEvtIoDeviceControl(
     IN WDFQUEUE      Queue,
@@ -87,8 +342,50 @@ FilterEvtIoDeviceControl(
     device = WdfIoQueueGetDevice(Queue);
 	
 	PIRP irp = WdfRequestWdmGetIrp(Request);
+		
+	CHAR info[256];
+	DbgPrint("Filter!%s InputBufferLength=%u OutputBufferLength=%u IRP: Type=0x%x Size=%u\n",IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength, irp->Type, irp->Size);
 
-	DbgPrint("Filter!IoControlCode=0x%x InputBufferLength=%d OutputBufferLength=%d IRP: Type=%d Size=%d\n",IoControlCode, InputBufferLength, OutputBufferLength, irp->Type, irp->Size);
+	PVOID  buffer;
+	size_t  bufSize;
+	status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
+	
+	CHAR hexString[256];
+	CHAR chrString[256];
+	CHAR tempString[8];
+	RtlZeroMemory(hexString, 256);
+	RtlZeroMemory(chrString, 256);
+	RtlZeroMemory(tempString, 8);
+	unsigned char *p = (unsigned char*)buffer;
+	unsigned int i = 0;
+	BOOLEAN multiLine = FALSE;
+	for(; i<bufSize; i++)
+	{
+		RtlStringCbPrintfA(tempString, 8, "%02X ", p[i]);
+		RtlStringCbCatA(hexString, 256, tempString);
+
+		RtlStringCbPrintfA(tempString, 8, "%c", p[i]>31 && p[i]<127 ? p[i] : '.' );
+		RtlStringCbCatA(chrString, 256, tempString);
+
+		if ((i+1)%38 == 0)
+		{
+			DbgPrint("Filter!%s%s",hexString,chrString);
+			RtlZeroMemory(hexString, 256);
+			RtlZeroMemory(chrString, 256);
+			multiLine = TRUE;
+		}
+	}
+	if ((i+1)%38 != 0)
+	{
+		CHAR padding[256];
+		RtlZeroMemory(padding, 256);
+		if (multiLine)
+		{
+			RtlStringCbPrintfA(padding, 256, "%*s", 3*(38-(i%38)),"");
+		}
+		
+		DbgPrint("Filter!%s%s%s",hexString,padding,chrString);
+	}
 
     switch (IoControlCode) {
 
