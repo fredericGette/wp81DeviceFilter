@@ -21,58 +21,6 @@ typedef struct _DEVICEFILTER_CONTEXT
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(DEVICEFILTER_CONTEXT, GetDeviceContext);
 
-
-VOID
-FilterRequestCompletionRoutine(
-    IN WDFREQUEST                  Request,
-    IN WDFIOTARGET                 Target,
-    PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-    IN WDFCONTEXT                  Context
-   )
-{
-    UNREFERENCED_PARAMETER(Target);
-    UNREFERENCED_PARAMETER(Context);
-	
-	DbgPrint("Filter!Completion Request Size=%u Type=0x%x IoStatus.Status=0x%x IoStatus.Information=0x%x\n", CompletionParams->Size, CompletionParams->Type, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
-
-    WdfRequestComplete(Request, CompletionParams->IoStatus.Status);
-
-    return;
-}
-
-
-VOID
-FilterForwardRequestWithCompletionRoutine(
-    IN WDFREQUEST Request,
-    IN WDFIOTARGET Target
-    )
-{
-    BOOLEAN ret;
-    NTSTATUS status;
-
-    //
-    // The following funciton essentially copies the content of
-    // current stack location of the underlying IRP to the next one. 
-    //
-    WdfRequestFormatRequestUsingCurrentType(Request);
-
-    WdfRequestSetCompletionRoutine(Request,
-                                FilterRequestCompletionRoutine,
-                                WDF_NO_CONTEXT);
-
-    ret = WdfRequestSend(Request,
-                         Target,
-                         WDF_NO_SEND_OPTIONS);
-
-    if (ret == FALSE) {
-        status = WdfRequestGetStatus (Request);
-        DbgPrint("Filter!WdfRequestSend failed: 0x%x\n", status);
-        WdfRequestComplete(Request, status);
-    }
-
-    return;
-}
-
 CHAR* IoControlCodeInfo(ULONG IoControlCode, CHAR* buffer, size_t bufSize)
 {
 	RtlZeroMemory(buffer, bufSize);
@@ -325,6 +273,111 @@ CHAR* IoControlCodeInfo(ULONG IoControlCode, CHAR* buffer, size_t bufSize)
 	return buffer;
 }
 
+VOID printBufferContent(PVOID buffer, size_t bufSize)
+{
+	CHAR hexString[256];
+	CHAR chrString[256];
+	CHAR tempString[8];
+	RtlZeroMemory(hexString, 256);
+	RtlZeroMemory(chrString, 256);
+	RtlZeroMemory(tempString, 8);
+	unsigned char *p = (unsigned char*)buffer;
+	unsigned int i = 0;
+	BOOLEAN multiLine = FALSE;
+	for(; i<bufSize && i < 608; i++)
+	{
+		RtlStringCbPrintfA(tempString, 8, "%02X ", p[i]);
+		RtlStringCbCatA(hexString, 256, tempString);
+
+		RtlStringCbPrintfA(tempString, 8, "%c", p[i]>31 && p[i]<127 ? p[i] : '.' );
+		RtlStringCbCatA(chrString, 256, tempString);
+
+		if ((i+1)%38 == 0)
+		{
+			DbgPrint("Filter!%s%s",hexString,chrString);
+			RtlZeroMemory(hexString, 256);
+			RtlZeroMemory(chrString, 256);
+			multiLine = TRUE;
+		}
+	}
+	if (i != 0 && (i+1)%38 != 0)
+	{
+		CHAR padding[256];
+		RtlZeroMemory(padding, 256);
+		if (multiLine)
+		{
+			RtlStringCbPrintfA(padding, 256, "%*s", 3*(38-(i%38)),"");
+		}
+		
+		DbgPrint("Filter!%s%s%s",hexString,padding,chrString);
+		if (i == 608)
+		{
+			DbgPrint("Filter!...\n");
+		}
+	}
+}
+
+VOID
+FilterRequestCompletionRoutine(
+    IN WDFREQUEST                  Request,
+    IN WDFIOTARGET                 Target,
+    PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    IN WDFCONTEXT                  Context
+   )
+{
+	NTSTATUS status;
+	
+    UNREFERENCED_PARAMETER(Target);
+    UNREFERENCED_PARAMETER(Context);
+
+	PIRP irp = WdfRequestWdmGetIrp(Request);
+	
+	DbgPrint("Filter!Complet IoControlCode=0x%06X OutputBufferLength=%u IoStatus.Status=0x%x IoStatus.Information=0x%x\n", irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
+
+	PVOID  buffer;
+	size_t  bufSize;
+	status = WdfRequestRetrieveOutputBuffer(Request, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength, &buffer, &bufSize );
+	printBufferContent(buffer, bufSize);
+
+    WdfRequestComplete(Request, CompletionParams->IoStatus.Status);
+
+    return;
+}
+
+
+VOID
+FilterForwardRequestWithCompletionRoutine(
+    IN WDFREQUEST Request,
+    IN WDFIOTARGET Target
+    )
+{
+    BOOLEAN ret;
+    NTSTATUS status;
+
+    //
+    // The following funciton essentially copies the content of
+    // current stack location of the underlying IRP to the next one. 
+    //
+    WdfRequestFormatRequestUsingCurrentType(Request);
+
+    WdfRequestSetCompletionRoutine(Request,
+                                FilterRequestCompletionRoutine,
+                                WDF_NO_CONTEXT);
+
+    ret = WdfRequestSend(Request,
+                         Target,
+                         WDF_NO_SEND_OPTIONS);
+
+    if (ret == FALSE) {
+        status = WdfRequestGetStatus (Request);
+        DbgPrint("Filter!WdfRequestSend failed: 0x%x\n", status);
+        WdfRequestComplete(Request, status);
+    }
+
+    return;
+}
+
+
 VOID
 FilterEvtIoDeviceControl(
     IN WDFQUEUE      Queue,
@@ -344,48 +397,13 @@ FilterEvtIoDeviceControl(
 	PIRP irp = WdfRequestWdmGetIrp(Request);
 		
 	CHAR info[256];
-	DbgPrint("Filter!%s InputBufferLength=%u OutputBufferLength=%u IRP: Type=0x%x Size=%u\n",IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength, irp->Type, irp->Size);
+	DbgPrint("Filter!Receive %s InputBufferLength=%u OutputBufferLength=%u IRP: Type=0x%x Size=%u\n",IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength, irp->Type, irp->Size);
 
 	PVOID  buffer;
 	size_t  bufSize;
 	status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
 	
-	CHAR hexString[256];
-	CHAR chrString[256];
-	CHAR tempString[8];
-	RtlZeroMemory(hexString, 256);
-	RtlZeroMemory(chrString, 256);
-	RtlZeroMemory(tempString, 8);
-	unsigned char *p = (unsigned char*)buffer;
-	unsigned int i = 0;
-	BOOLEAN multiLine = FALSE;
-	for(; i<bufSize; i++)
-	{
-		RtlStringCbPrintfA(tempString, 8, "%02X ", p[i]);
-		RtlStringCbCatA(hexString, 256, tempString);
-
-		RtlStringCbPrintfA(tempString, 8, "%c", p[i]>31 && p[i]<127 ? p[i] : '.' );
-		RtlStringCbCatA(chrString, 256, tempString);
-
-		if ((i+1)%38 == 0)
-		{
-			DbgPrint("Filter!%s%s",hexString,chrString);
-			RtlZeroMemory(hexString, 256);
-			RtlZeroMemory(chrString, 256);
-			multiLine = TRUE;
-		}
-	}
-	if ((i+1)%38 != 0)
-	{
-		CHAR padding[256];
-		RtlZeroMemory(padding, 256);
-		if (multiLine)
-		{
-			RtlStringCbPrintfA(padding, 256, "%*s", 3*(38-(i%38)),"");
-		}
-		
-		DbgPrint("Filter!%s%s%s",hexString,padding,chrString);
-	}
+	printBufferContent(buffer, bufSize);
 
     switch (IoControlCode) {
 
