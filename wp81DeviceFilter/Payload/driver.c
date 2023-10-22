@@ -8,6 +8,11 @@
 #include <wdf.h>
 #include <ntstrsafe.h>
 
+#define WdfFltrTrace(_MSG_) { \
+        DbgPrint("Filter!"__FUNCTION__ ": ");   \
+        DbgPrint _MSG_;                         \
+}
+
 #define REQUIRED_ACCESS_FROM_CTL_CODE(ctrlCode)     (((ULONG)(ctrlCode & 0xC000)) >> 14)
 
 typedef struct _DEVICEFILTER_CONTEXT
@@ -278,6 +283,7 @@ VOID printBufferContent(PVOID buffer, size_t bufSize)
 	CHAR hexString[256];
 	CHAR chrString[256];
 	CHAR tempString[8];
+	size_t length;
 	RtlZeroMemory(hexString, 256);
 	RtlZeroMemory(chrString, 256);
 	RtlZeroMemory(tempString, 8);
@@ -300,7 +306,8 @@ VOID printBufferContent(PVOID buffer, size_t bufSize)
 			multiLine = TRUE;
 		}
 	}
-	if (i != 0 && (i+1)%38 != 0)
+	RtlStringCbLengthA(hexString,256,&length);
+	if (length != 0)
 	{
 		CHAR padding[256];
 		RtlZeroMemory(padding, 256);
@@ -308,13 +315,14 @@ VOID printBufferContent(PVOID buffer, size_t bufSize)
 		{
 			RtlStringCbPrintfA(padding, 256, "%*s", 3*(38-(i%38)),"");
 		}
-		
+
 		DbgPrint("Filter!%s%s%s",hexString,padding,chrString);
-		if (i == 608)
-		{
-			DbgPrint("Filter!...\n");
-		}
 	}
+
+	if (i == 608)
+	{
+		DbgPrint("Filter!...\n");
+	}	
 }
 
 VOID
@@ -332,7 +340,7 @@ FilterRequestCompletionRoutine(
 
 	PIRP irp = WdfRequestWdmGetIrp(Request);
 	
-	DbgPrint("Filter!Complet IoControlCode=0x%06X OutputBufferLength=%u IoStatus.Status=0x%x IoStatus.Information=0x%x\n", irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
+	WdfFltrTrace(("Complet IoControlCode=0x%06X OutputBufferLength=%u IoStatus.Status=0x%x IoStatus.Information=0x%x\n", irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information));
 
 	PVOID  buffer;
 	size_t  bufSize;
@@ -397,12 +405,11 @@ FilterEvtIoDeviceControl(
 	PIRP irp = WdfRequestWdmGetIrp(Request);
 		
 	CHAR info[256];
-	DbgPrint("Filter!Receive %s InputBufferLength=%u OutputBufferLength=%u IRP: Type=0x%x Size=%u\n",IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength, irp->Type, irp->Size);
+	DbgPrint("Filter!Receive %s InputBufferLength=%u OutputBufferLength=%u\n",IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength);
 
 	PVOID  buffer;
 	size_t  bufSize;
 	status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
-	
 	printBufferContent(buffer, bufSize);
 
     switch (IoControlCode) {
@@ -425,6 +432,7 @@ exit:
 
     return;
 }
+
 
 NTSTATUS EvtDriverDeviceAdd(WDFDRIVER  Driver, PWDFDEVICE_INIT  DeviceInit)
 {
@@ -485,7 +493,7 @@ NTSTATUS EvtDriverDeviceAdd(WDFDRIVER  Driver, PWDFDEVICE_INIT  DeviceInit)
 	pWdmDriver2 = pWdmLowerDO->DriverObject;
 	DbgPrint("Filter!LowerDO Driver Type=%d (4=Driver), Device=0x%p, DriverName=%wZ, HardwareDatabase=%wZ\n",pWdmDriver2->Type, pWdmDriver2->DeviceObject, &(pWdmDriver2->DriverName), pWdmDriver2->HardwareDatabase);
 	
-			
+				
 	WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&ioQueueConfig, WdfIoQueueDispatchParallel);	
 	
 	ioQueueConfig.EvtIoDeviceControl = FilterEvtIoDeviceControl;
