@@ -18,8 +18,10 @@ namespace wp81DeviceFilter
 		MainPage();
 
 	protected:
+		void UIConsoleAddText(Platform::String ^ text);
 		virtual void OnNavigatedTo(Windows::UI::Xaml::Navigation::NavigationEventArgs^ e) override;
 		void AppBarButton_Click(Platform::Object ^ sender, Windows::UI::Xaml::RoutedEventArgs ^ e);
 		void Install();
+		void SendIoctl();
 	};
 }

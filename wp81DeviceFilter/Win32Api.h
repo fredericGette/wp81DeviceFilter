@@ -107,6 +107,107 @@ typedef struct _BLUETOOTH_FIND_RADIO_PARAMS {
 
 typedef HANDLE      HBLUETOOTH_RADIO_FIND;
 
+#define GET_BITS(field,offset,mask)         ( ( (field) >> (offset) ) & (mask) )
+#define GET_BIT(field,offset)               ( GET_BITS(field,offset,0x1) )
+
+#define LMP_3_SLOT_PACKETS(x)               (GET_BIT(x, 0))
+#define LMP_5_SLOT_PACKETS(x)               (GET_BIT(x, 1))
+#define LMP_ENCRYPTION(x)                   (GET_BIT(x, 2))
+#define LMP_SLOT_OFFSET(x)                  (GET_BIT(x, 3))
+#define LMP_TIMING_ACCURACY(x)              (GET_BIT(x, 4))
+#define LMP_SWITCH(x)                       (GET_BIT(x, 5))
+#define LMP_HOLD_MODE(x)                    (GET_BIT(x, 6))
+#define LMP_SNIFF_MODE(x)                   (GET_BIT(x, 7))
+#define LMP_PARK_MODE(x)                    (GET_BIT(x, 8))
+#define LMP_RSSI(x)                         (GET_BIT(x, 9))
+#define LMP_CHANNEL_QUALITY_DRIVEN_MODE(x)  (GET_BIT(x,10))
+#define LMP_SCO_LINK(x)                     (GET_BIT(x,11))
+#define LMP_HV2_PACKETS(x)                  (GET_BIT(x,12))
+#define LMP_HV3_PACKETS(x)                  (GET_BIT(x,13))
+#define LMP_MU_LAW_LOG(x)                   (GET_BIT(x,14))
+#define LMP_A_LAW_LOG(x)                    (GET_BIT(x,15))
+#define LMP_CVSD(x)                         (GET_BIT(x,16))
+#define LMP_PAGING_SCHEME(x)                (GET_BIT(x,17))
+#define LMP_POWER_CONTROL(x)                (GET_BIT(x,18))
+#define LMP_TRANSPARENT_SCO_DATA(x)         (GET_BIT(x,19))
+#define LMP_FLOW_CONTROL_LAG(x)             (GET_BITS(x,20,0x3))
+#define LMP_BROADCAST_ENCRYPTION(x)         (GET_BIT(x,23))
+#define LMP_ENHANCED_DATA_RATE_ACL_2MBPS_MODE(x) (GET_BIT(x,25))
+#define LMP_ENHANCED_DATA_RATE_ACL_3MBPS_MODE(x) (GET_BIT(x,26))
+#define LMP_ENHANCED_INQUIRY_SCAN(x)        (GET_BIT(x,27))
+#define LMP_INTERLACED_INQUIRY_SCAN(x)      (GET_BIT(x,28))
+#define LMP_INTERLACED_PAGE_SCAN(x)         (GET_BIT(x,29))
+#define LMP_RSSI_WITH_INQUIRY_RESULTS(x)    (GET_BIT(x,30))
+#define LMP_ESCO_LINK(x)                    (GET_BIT(x,31)) 
+#define LMP_EV4_PACKETS(x)                  (GET_BIT(x,0)) //high
+#define LMP_EV5_PACKETS(x)                  (GET_BIT(x,1)) //high
+#define LMP_AFH_CAPABLE_SLAVE(x)            (GET_BIT(x,3)) //high
+#define LMP_AFH_CLASSIFICATION_SLAVE(x)     (GET_BIT(x,4)) //high
+#define LMP_BR_EDR_NOT_SUPPORTED(x)         (GET_BIT(x,5)) //high
+#define LMP_LE_SUPPORTED(x)                 (GET_BIT(x,6)) //high
+#define LMP_3SLOT_EDR_ACL_PACKETS(x)        (GET_BIT(x,7)) //high
+#define LMP_5SLOT_EDR_ACL_PACKETS(x)        (GET_BIT(x,8)) //high
+#define LMP_SNIFF_SUBRATING(x)              (GET_BIT(x,9)) //high
+#define LMP_PAUSE_ENCRYPTION(x)             (GET_BIT(x,10)) //high
+#define LMP_AFH_CAPABLE_MASTER(x)           (GET_BIT(x,11)) //high
+#define LMP_AFH_CLASSIFICATION_MASTER(x)    (GET_BIT(x,12)) //high
+#define LMP_EDR_ESCO_2MBPS_MODE(x)          (GET_BIT(x,13)) //high
+#define LMP_EDR_ESCO_3MBPS_MODE(x)          (GET_BIT(x,14)) //high
+#define LMP_3SLOT_EDR_ESCO_PACKETS(x)       (GET_BIT(x,15)) //high
+#define LMP_EXTENDED_INQUIRY_RESPONSE(x)    (GET_BIT(x,16)) //high
+#define LMP_SIMULT_LE_BR_TO_SAME_DEV(x)     (GET_BIT(x,17)) //high
+#define LMP_SECURE_SIMPLE_PAIRING(x)        (GET_BIT(x,19)) //high
+#define LMP_ENCAPSULATED_PDU(x)             (GET_BIT(x,20)) //high
+#define LMP_ERRONEOUS_DATA_REPORTING(x)     (GET_BIT(x,21)) //high
+#define LMP_NON_FLUSHABLE_PACKET_BOUNDARY_FLAG(x) (GET_BIT(x,22)) //high
+#define LMP_LINK_SUPERVISION_TIMEOUT_CHANGED_EVENT(x) (GET_BIT(x,24)) //high
+#define LMP_INQUIRY_RESPONSE_TX_POWER_LEVEL(x)(GET_BIT(x,25)) //high
+#define LMP_EXTENDED_FEATURES(x)            (GET_BIT(x,31)) //high
+#define LOCAL_RADIO_DISCOVERABLE    (0x00000001)
+#define LOCAL_RADIO_CONNECTABLE     (0x00000002)
+#define BDIF_ADDRESS			(0x00000001)
+#define BDIF_COD                (0x00000002)
+#define BDIF_NAME               (0x00000004)
+#define BDIF_PAIRED             (0x00000008)
+#define BDIF_PERSONAL           (0x00000010)
+#define BDIF_CONNECTED          (0x00000020)
+#define BDIF_SHORT_NAME         (0x00000040)
+#define BDIF_VISIBLE            (0x00000080)
+#define BDIF_SSP_SUPPORTED      (0x00000100)
+#define BDIF_SSP_PAIRED         (0x00000200)
+#define BDIF_SSP_MITM_PROTECTED (0x00000400)
+#define BDIF_RSSI               (0x00001000)
+#define BDIF_EIR                (0x00002000)
+#define BDIF_BR                 (0x00004000)
+#define BDIF_LE                 (0x00008000)
+#define BDIF_LE_PAIRED          (0x00010000)
+#define BDIF_LE_PERSONAL        (0x00020000)
+#define BDIF_LE_MITM_PROTECTED  (0x00040000)
+#define BDIF_LE_PRIVACY_ENABLED (0x00080000)
+#define BDIF_LE_RANDOM_ADDRESS_TYPE \
+                                (0x00100000)
+#define COD_FORMAT_BIT_OFFSET   (0)
+#define COD_MINOR_BIT_OFFSET    (2)
+#define COD_MAJOR_BIT_OFFSET    (8 * 1)
+#define COD_SERVICE_BIT_OFFSET  (8 * 1 + 5)
+#define COD_FORMAT_MASK         (0x000003)
+#define COD_MINOR_MASK          (0x0000FC)
+#define COD_MAJOR_MASK          (0x001F00)
+#define COD_SERVICE_MASK        (0xFFE000)
+#define GET_COD_FORMAT(_cod)    ( (_cod) & COD_FORMAT_MASK   >> COD_FORMAT_BIT_OFFSET)
+#define GET_COD_MINOR(_cod)     (((_cod) & COD_MINOR_MASK)   >> COD_MINOR_BIT_OFFSET)
+#define GET_COD_MAJOR(_cod)     (((_cod) & COD_MAJOR_MASK)   >> COD_MAJOR_BIT_OFFSET)
+#define GET_COD_SERVICE(_cod)   (((_cod) & COD_SERVICE_MASK) >> COD_SERVICE_BIT_OFFSET)
+#define COD_SERVICE_LIMITED                 (0x0001)
+#define COD_SERVICE_POSITIONING             (0x0008)
+#define COD_SERVICE_NETWORKING              (0x0010)
+#define COD_SERVICE_RENDERING               (0x0020)
+#define COD_SERVICE_CAPTURING               (0x0040)
+#define COD_SERVICE_OBJECT_XFER             (0x0080)
+#define COD_SERVICE_AUDIO                   (0x0100)
+#define COD_SERVICE_TELEPHONY               (0x0200)
+#define COD_SERVICE_INFORMATION             (0x0400)
+
 extern "C" {
 	WINBASEAPI HMODULE WINAPI LoadLibraryExW(LPCWSTR lpLibFileName, HANDLE hFile, DWORD dwFlags);
 	WINBASEAPI HMODULE WINAPI GetModuleHandleW(LPCWSTR lpModuleName);
