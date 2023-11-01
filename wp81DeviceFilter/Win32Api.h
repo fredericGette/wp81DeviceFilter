@@ -231,6 +231,8 @@ extern "C" {
 	WINBASEAPI BOOL WINAPI CloseHandle(HANDLE hObject);
 
 	WINBASEAPI BOOL WINAPI DeviceIoControl(HANDLE hDevice, DWORD dwIoControlCode, LPVOID lpInBuffer, DWORD nInBufferSize, LPVOID lpOutBuffer, DWORD nOutBufferSize, LPDWORD lpBytesReturned, LPOVERLAPPED lpOverlapped);
+	WINBASEAPI BOOL	WINAPI GetOverlappedResult(HANDLE hFile, LPOVERLAPPED lpOverlapped, LPDWORD lpNumberOfBytesTransferred, BOOL bWait);
+	WINBASEAPI DWORD WINAPI	WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
 
 	WINBASEAPI BOOL	WINAPI CopyFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, BOOL bFailIfExists);
 
@@ -292,6 +294,8 @@ public:
 	WIN32API_DEFINE_PROC(CreateProcessA);
 	WIN32API_DEFINE_PROC(CloseHandle);
 	WIN32API_DEFINE_PROC(DeviceIoControl);
+	WIN32API_DEFINE_PROC(GetOverlappedResult);
+	WIN32API_DEFINE_PROC(WaitForSingleObject);
 	const HMODULE m_Kernel32legacy;
 	WIN32API_DEFINE_PROC(CopyFileW);
 	const HMODULE m_SecHost;
@@ -321,6 +325,8 @@ public:
 		WIN32API_INIT_PROC(m_Kernelbase, CreateProcessA),
 		WIN32API_INIT_PROC(m_Kernelbase, CloseHandle),
 		WIN32API_INIT_PROC(m_Kernelbase, DeviceIoControl),
+		WIN32API_INIT_PROC(m_Kernelbase, GetOverlappedResult),
+		WIN32API_INIT_PROC(m_Kernelbase, WaitForSingleObject),
 		m_Kernel32legacy(GetModuleHandleW(L"KERNEL32LEGACY.DLL")),
 		WIN32API_INIT_PROC(m_Kernel32legacy, CopyFileW),
 		m_SecHost(GetModuleHandleW(L"SECHOST.DLL")),

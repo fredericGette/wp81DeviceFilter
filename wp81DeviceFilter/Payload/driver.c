@@ -3,6 +3,11 @@
 //
 // set PATH=C:\Program Files (x86)\Microsoft Visual Studio 12.0\Common7\IDE\;C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_arm;C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin;%PATH%
 //
+// BthEnum x3	BthLEEnum x1
+//      \        /
+//      BthMini x3		System\\CurrentControlSet\\Enum\\SystemBusQc\\SMD_BT\\4&315a27b&0&4097
+//          |
+//     QcBluetooth x2
 
 #include <ntifs.h>
 #include <wdf.h>
@@ -25,6 +30,26 @@ typedef struct _DEVICEFILTER_CONTEXT
 } DEVICEFILTER_CONTEXT, *PDEVICEFILTER_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(DEVICEFILTER_CONTEXT, GetDeviceContext);
+
+
+typedef ULONGLONG BTH_ADDR, *PBTH_ADDR;
+#define BTH_MAX_PIN_SIZE            (16)
+typedef struct _BTH_PIN_INFO {
+	UCHAR pin[BTH_MAX_PIN_SIZE];
+	UCHAR pinLength;
+} BTH_PIN_INFO, *PBTH_PIN_INFO;
+typedef struct _BTH_AUTHENTICATE_RESPONSE {
+	ULONG unknown1;
+	BTH_ADDR address;
+	UCHAR unknown2[520];
+	ULONG unknown3;
+	BTH_PIN_INFO info;
+	ULONG unknown4;
+	ULONG unknown5;
+	ULONG unknown6;
+	ULONG unknown7;
+} BTH_AUTHENTICATE_RESPONSE, *PBTH_AUTHENTICATE_RESPONSE;
+
 
 CHAR* IoControlCodeInfo(ULONG IoControlCode, CHAR* buffer, size_t bufSize)
 {
@@ -411,12 +436,27 @@ FilterEvtIoDeviceControl(
 	size_t  bufSize;
 	status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
 	printBufferContent(buffer, bufSize);
+	
+	PBTH_AUTHENTICATE_RESPONSE authResponse;
+	CHAR pin[BTH_MAX_PIN_SIZE+1];
+	RtlZeroMemory(&pin, sizeof(pin));
 
     switch (IoControlCode) {
-
-    //
-    // Put your cases for handling IOCTLs here
-    //
+		case 0x411004: // IOCTL_BTH_AUTH_RESPONSE
+			authResponse = buffer;
+			ULONG highAddress = (authResponse->address >> 32);
+			ULONG lowAddress = ((authResponse->address << 32) >> 32);
+			RtlCopyMemory(pin, authResponse->info.pin, BTH_MAX_PIN_SIZE);
+			DbgPrint("Filter!pin=[%s] pin length=%u BT addr=%02X %02X %02X %02X %02X %02X\n", pin, authResponse->info.pinLength, ((highAddress >> 8) & 0xFF), (highAddress & 0xFF), ((lowAddress >> 24) & 0xFF), ((lowAddress >> 16) & 0xFF), ((lowAddress >> 8) & 0xFF), (lowAddress & 0xFF));
+			if (strcmp(pin,"---") == 0)
+			{
+				DbgPrint("Filter!Replace existing pin with computed wiimote pin\n");
+				RtlZeroMemory(authResponse->info.pin, BTH_MAX_PIN_SIZE);
+				RtlCopyMemory(authResponse->info.pin, &(authResponse->address), 6);
+				authResponse->info.pinLength=6;
+				printBufferContent(buffer, bufSize);
+			}
+			break;
     }
     
     if (!NT_SUCCESS(status)) {

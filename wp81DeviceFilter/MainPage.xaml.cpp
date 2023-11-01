@@ -64,6 +64,25 @@ typedef struct _BTH_AUTHENTICATE_DEVICE {
 
 typedef UCHAR BTHSTATUS;
 
+#define BTH_MAX_PIN_SIZE            (16)
+
+typedef struct _BTH_PIN_INFO {
+	UCHAR pin[BTH_MAX_PIN_SIZE];
+	UCHAR pinLength;
+} BTH_PIN_INFO, *PBTH_PIN_INFO;
+
+typedef struct _BTH_AUTHENTICATE_RESPONSE {
+	ULONG unknown1;
+	BTH_ADDR address;
+	UCHAR unknown2[520];
+	ULONG unknown3;
+	BTH_PIN_INFO info;
+	ULONG unknown4;
+	ULONG unknown5;
+	ULONG unknown6;
+	ULONG unknown7;
+} BTH_AUTHENTICATE_RESPONSE, *PBTH_AUTHENTICATE_RESPONSE;
+
 Win32Api win32Api;
 
 MainPage::MainPage()
@@ -82,6 +101,31 @@ void debug(WCHAR* format, ...)
 	OutputDebugStringW(buffer);
 
 	va_end(args);
+}
+
+void debugMultiSz(WCHAR *multisz)
+{
+	WCHAR* c = multisz;
+	WCHAR* value = nullptr;
+	boolean isFirstString = true;
+	do
+	{
+		if (isFirstString)
+		{
+			isFirstString = false;
+		}
+		else
+		{
+			debug(L",");
+		}
+		value = c;
+		while (*c != L'\0')
+		{
+			c++;
+		}
+		c++; // skip \0
+		debug(L"%ls\n", value);
+	} while (*c != L'\0');
 }
 
 void MainPage::UIConsoleAddText(Platform::String ^ text) {
@@ -281,6 +325,8 @@ void wp81DeviceFilter::MainPage::Install()
 	DWORD newValueDataSize = 0;
 	newValueDataSize += appendMultiSz(L"wp81devicefilter", newValueData);
 	newValueDataSize++; // add final \0
+	debug(L"First MultiString:\n");
+	debugMultiSz(newValueData);
 
 	HKEY pdoKey = {};
 	// lumia 520
@@ -308,8 +354,42 @@ void wp81DeviceFilter::MainPage::Install()
 		return;
 	}
 
-	TextTest->Text += L"OK\n";
+	//// Set wp81devicefilter as an upper filter of Bluetooth class
 
+	//newValueDataSize = 0;
+	//newValueDataSize += appendMultiSz(L"bthl2cap", newValueData + newValueDataSize); 
+	//newValueDataSize += appendMultiSz(L"bthl2cap", newValueData + newValueDataSize);
+	//newValueDataSize += appendMultiSz(L"wp81devicefilter", newValueData + newValueDataSize);
+	//newValueDataSize++; // add final \0
+	//debug(L"Second MultiString:\n");
+	//debugMultiSz(newValueData);
+
+	//// lumia 520
+	//retCode = win32Api.RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"System\\CurrentControlSet\\Control\\Class\\{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}", 0, KEY_ALL_ACCESS, &pdoKey);
+	//if (retCode != ERROR_SUCCESS)
+	//{
+	//	debug(L"Error RegOpenKeyExW : %d\n", retCode);
+	//	TextTest->Text += L"Failed\n";
+	//	return;
+	//}
+
+	//retCode = win32Api.RegSetValueExW(pdoKey, L"UpperFilters", NULL, REG_MULTI_SZ, (BYTE*)newValueData, newValueDataSize * 2);
+	//if (retCode != ERROR_SUCCESS)
+	//{
+	//	debug(L"Error RegSetValueExW 'UpperFilters': %d\n", retCode);
+	//	TextTest->Text += L"Failed\n";
+	//	return;
+	//}
+
+	//retCode = win32Api.RegCloseKey(pdoKey);
+	//if (retCode != ERROR_SUCCESS)
+	//{
+	//	debug(L"Error RegCloseKey 'pdoKey': %d\n", retCode);
+	//	TextTest->Text += L"Failed\n";
+	//	return;
+	//}
+
+	TextTest->Text += L"OK\n";
 
 
 	TextTest->Text += L"Install/Update driver...";
@@ -663,11 +743,30 @@ void wp81DeviceFilter::MainPage::SendIoctl()
 			UIConsoleAddText(L"failed!\n");
 		}
 
+		CloseHandle(hDevice);
+
+		HANDLE timeout = CreateEventEx(nullptr, nullptr, CREATE_EVENT_MANUAL_RESET, EVENT_ALL_ACCESS);
+
+		OVERLAPPED ov;
+		ov.hEvent = CreateEventEx(nullptr, nullptr, CREATE_EVENT_MANUAL_RESET, EVENT_ALL_ACCESS);
+		if (ov.hEvent == INVALID_HANDLE_VALUE)
+		{
+			debug(L"Failed to create event! 0x%X\n", GetLastError());
+			UIConsoleAddText(L"Failed to create event.\n");
+			return;
+		}
+		hDevice = win32Api.CreateFileW(L"\\??\\SystemBusQc#SMD_BT#4&315a27b&0&4097#{0850302a-b344-4fda-9be9-90576b8d46f0}", GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
+		if (hDevice == INVALID_HANDLE_VALUE)
+		{
+			debug(L"Failed to open device! 0x%X\n", GetLastError());
+			UIConsoleAddText(L"Failed to open device.\n");
+			return;
+		}
+
 		UIConsoleAddText(L"Calling device IOCTL_BTH_PAIR_DEVICE...");
 		// IOCTL_BTH_PAIR_DEVICE(0x411010)
 		BTH_AUTHENTICATE_DEVICE pairDevice;
 		debug(L"BTH_AUTHENTICATE_DEVICE size=%u\n", sizeof(pairDevice));
-		UCHAR OutputBuffer[1024];
 		ZeroMemory(&pairDevice, sizeof(pairDevice));
 		pairDevice.unknown1 = 0x4000;
 		pairDevice.address = 0xE0E751333260;
@@ -675,7 +774,7 @@ void wp81DeviceFilter::MainPage::SendIoctl()
 		printBufferContent(&pairDevice, 592);
 		BTHSTATUS bthStatus;
 
-		success = win32Api.DeviceIoControl(hDevice, 0x411010, &pairDevice, 592, &bthStatus, 1, &returned, nullptr);
+		success = win32Api.DeviceIoControl(hDevice, 0x411010, &pairDevice, 592, &bthStatus, 1, &returned, &ov);
 		if (success)
 		{
 			debug(L"Device call IOCTL_BTH_PAIR_DEVICE succeeded! returned=%u\n", returned);
@@ -686,10 +785,59 @@ void wp81DeviceFilter::MainPage::SendIoctl()
 		}
 		else
 		{
-			debug(L"Device call IOCTL_BTH_PAIR_DEVICE failed! 0x%X (0x57=ERROR_INVALID_PARAMETER)\n", GetLastError());
-			UIConsoleAddText(L"failed!\n");
+			if (GetLastError() != ERROR_IO_PENDING)
+			{
+				debug(L"Device call IOCTL_BTH_PAIR_DEVICE failed! 0x%X (0x57=ERROR_INVALID_PARAMETER)\n", GetLastError());
+				UIConsoleAddText(L"failed!\n");
+			}
+			else
+			{
+				debug(L"Waiting result...\n");
+				UIConsoleAddText(L"Waiting result...");
+
+				WaitForSingleObject(timeout, 2000);
+
+				// IOCTL_BTH_AUTH_RESPONSE(0x411004)
+				BTH_AUTHENTICATE_RESPONSE sendPin;
+				debug(L"IOCTL_BTH_AUTH_RESPONSE size=%u\n", sizeof(sendPin));
+				ZeroMemory(&sendPin, sizeof(sendPin));
+				sendPin.unknown1 = 0x4000;
+				sendPin.address = 0xE0E751333260;
+				sendPin.unknown3 = 0x01;
+				memcpy(sendPin.info.pin, "1234", 4);
+				sendPin.info.pinLength = 4;
+				printBufferContent(&sendPin, 576);
+				BTHSTATUS bthStatus2;
+
+				success = win32Api.DeviceIoControl(hDevice, 0x411004, &sendPin, 576, &bthStatus2, 1, &returned, NULL);
+				if (success)
+				{
+					debug(L"Device call IOCTL_BTH_AUTH_RESPONSE succeeded! returned=%u\n", returned);
+					UIConsoleAddText(L"succeeded!\n");
+
+					printBufferContent(&bthStatus2, returned);
+					debug(L"IOCTL_BTH_AUTH_RESPONSE response=%s\n", BthStatusDesc(bthStatus2));
+				}
+				else
+				{
+					debug(L"Device call IOCTL_BTH_AUTH_RESPONSE failed! 0x%X (0x57=ERROR_INVALID_PARAMETER 0x48F=ERROR_DEVICE_NOT_CONNECTED 0xAA=ERROR_BUSY)\n", GetLastError());
+					UIConsoleAddText(L"failed!\n");
+				}
+			}
 		}
 
+		WaitForSingleObject(ov.hEvent, INFINITE);
+		GetOverlappedResult(hDevice, &ov, &returned, FALSE);
+
+		debug(L"Device call IOCTL_BTH_PAIR_DEVICE succeeded! returned=%u\n", returned);
+		UIConsoleAddText(L"succeeded!\n");
+		
+		debug(L"returned=%u\n", returned);
+		printBufferContent(&bthStatus, returned);
+		debug(L"IOCTL_BTH_PAIR_DEVICE response=%s\n", BthStatusDesc(bthStatus));
+
+		CloseHandle(timeout);
+		CloseHandle(ov.hEvent);
 		CloseHandle(hDevice);
 	});
 }
