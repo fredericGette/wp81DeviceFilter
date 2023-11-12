@@ -619,7 +619,7 @@ void wp81DeviceFilter::MainPage::SendIoctl()
 		BTH_LOCAL_RADIO_INFO localRadioInfo;
 		debug(L"BTH_LOCAL_RADIO_INFO size=%u\n",sizeof(localRadioInfo));
 		DWORD returned;
-		BOOL success = win32Api.DeviceIoControl(hDevice, 0x410000, &localRadioInfo, 292, &localRadioInfo, 292, &returned, nullptr);
+		BOOL success = win32Api.DeviceIoControl(hDevice, 0x410000, nullptr, 0, &localRadioInfo, 292, &returned, nullptr);
 		if (success)
 		{
 			debug(L"Device call IOCTL_BTH_GET_LOCAL_INFO succeeded! returned=%u\n", returned);

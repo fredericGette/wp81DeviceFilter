@@ -5,18 +5,13 @@
 //
 // BthEnum x3	BthLEEnum x1
 //      \        /
-//      BthMini x3		System\\CurrentControlSet\\Enum\\SystemBusQc\\SMD_BT\\4&315a27b&0&4097
+//      BthMini x3		lumia520: System\\CurrentControlSet\\Enum\\SystemBusQc\\SMD_BT\\4&315a27b&0&4097
 //          |
 //     QcBluetooth x2
 
 #include <ntifs.h>
 #include <wdf.h>
 #include <ntstrsafe.h>
-
-#define WdfFltrTrace(_MSG_) { \
-        DbgPrint("Filter!"__FUNCTION__ ": ");   \
-        DbgPrint _MSG_;                         \
-}
 
 #define REQUIRED_ACCESS_FROM_CTL_CODE(ctrlCode)     (((ULONG)(ctrlCode & 0xC000)) >> 14)
 
@@ -365,13 +360,22 @@ FilterRequestCompletionRoutine(
 
 	PIRP irp = WdfRequestWdmGetIrp(Request);
 	
-	WdfFltrTrace(("Complet IoControlCode=0x%06X OutputBufferLength=%u IoStatus.Status=0x%x IoStatus.Information=0x%x\n", irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information));
+	size_t  OutputBufferLength = irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength;	
+	DbgPrint("Filter!Complet IoControlCode=0x%06X OutputBufferLength=%u IoStatus.Status=0x%x IoStatus.Information=0x%x\n", irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, OutputBufferLength, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
 
-	PVOID  buffer;
-	size_t  bufSize;
-	status = WdfRequestRetrieveOutputBuffer(Request, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength, &buffer, &bufSize );
-	printBufferContent(buffer, bufSize);
+	PVOID  buffer = NULL;
+	size_t  bufSize = 0;
+	if (OutputBufferLength > 0)
+	{
+		status = WdfRequestRetrieveOutputBuffer(Request, OutputBufferLength, &buffer, &bufSize );
+		if (!NT_SUCCESS(status)) {
+			DbgPrint("Filter!WdfRequestRetrieveOutputBuffer failed: 0x%x\n", status);
+			goto exit;
+		}
+		printBufferContent(buffer, bufSize);
+	}
 
+exit:
     WdfRequestComplete(Request, CompletionParams->IoStatus.Status);
 
     return;
@@ -410,7 +414,6 @@ FilterForwardRequestWithCompletionRoutine(
     return;
 }
 
-
 VOID
 FilterEvtIoDeviceControl(
     IN WDFQUEUE      Queue,
@@ -432,10 +435,19 @@ FilterEvtIoDeviceControl(
 	CHAR info[256];
 	DbgPrint("Filter!Receive %s InputBufferLength=%u OutputBufferLength=%u\n",IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength);
 
-	PVOID  buffer;
-	size_t  bufSize;
-	status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
-	printBufferContent(buffer, bufSize);
+	PVOID  buffer = NULL;
+	size_t  bufSize = 0;
+	if (InputBufferLength > 0)
+	{
+		status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
+		if (!NT_SUCCESS(status)) {
+			DbgPrint("Filter!WdfRequestRetrieveInputBuffer failed: 0x%x\n", status);
+			WdfRequestComplete(Request, status);
+			goto exit;
+			return;
+		}
+		printBufferContent(buffer, bufSize);
+	}
 	
 	PBTH_AUTHENTICATE_RESPONSE authResponse;
 	CHAR pin[BTH_MAX_PIN_SIZE+1];
@@ -459,13 +471,9 @@ FilterEvtIoDeviceControl(
 			break;
     }
     
-    if (!NT_SUCCESS(status)) {
-        WdfRequestComplete(Request, status);
-		goto exit;
-        return;
-    }
 
 	FilterForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device));
+	//WdmForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device));
 
 exit:
 	//DbgPrint("Filter!End FilterEvtIoDeviceControl\n");
