@@ -21,6 +21,8 @@ typedef struct _DEVICEFILTER_CONTEXT
     // Framework device this context is associated with
     //
     WDFDEVICE Device;
+	
+	CHAR Name[32];
 
 } DEVICEFILTER_CONTEXT, *PDEVICEFILTER_CONTEXT;
 
@@ -298,7 +300,7 @@ CHAR* IoControlCodeInfo(ULONG IoControlCode, CHAR* buffer, size_t bufSize)
 	return buffer;
 }
 
-VOID printBufferContent(PVOID buffer, size_t bufSize)
+VOID printBufferContent(PVOID buffer, size_t bufSize, CHAR* deviceName)
 {
 	CHAR hexString[256];
 	CHAR chrString[256];
@@ -320,7 +322,7 @@ VOID printBufferContent(PVOID buffer, size_t bufSize)
 
 		if ((i+1)%38 == 0)
 		{
-			DbgPrint("Filter!%s%s",hexString,chrString);
+			DbgPrint("Filter!%s!%s%s",deviceName, hexString, chrString);
 			RtlZeroMemory(hexString, 256);
 			RtlZeroMemory(chrString, 256);
 			multiLine = TRUE;
@@ -336,12 +338,12 @@ VOID printBufferContent(PVOID buffer, size_t bufSize)
 			RtlStringCbPrintfA(padding, 256, "%*s", 3*(38-(i%38)),"");
 		}
 
-		DbgPrint("Filter!%s%s%s",hexString,padding,chrString);
+		DbgPrint("Filter!%s!%s%s%s",deviceName, hexString, padding, chrString);
 	}
 
 	if (i == 608)
 	{
-		DbgPrint("Filter!...\n");
+		DbgPrint("Filter!%s!...\n",deviceName);
 	}	
 }
 
@@ -356,12 +358,13 @@ FilterRequestCompletionRoutine(
 	NTSTATUS status;
 	
     UNREFERENCED_PARAMETER(Target);
-    UNREFERENCED_PARAMETER(Context);
+	
+	PDEVICEFILTER_CONTEXT deviceContext = Context;
 
 	PIRP irp = WdfRequestWdmGetIrp(Request);
 	
 	size_t  OutputBufferLength = irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength;	
-	DbgPrint("Filter!Complet IoControlCode=0x%06X OutputBufferLength=%u IoStatus.Status=0x%x IoStatus.Information=0x%x\n", irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, OutputBufferLength, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
+	DbgPrint("Filter!%s!Complet IoControlCode=0x%06X OutputBufferLength=%u IoStatus.Status=0x%x IoStatus.Information=0x%x\n", deviceContext->Name, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, OutputBufferLength, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
 
 	PVOID  buffer = NULL;
 	size_t  bufSize = 0;
@@ -369,10 +372,10 @@ FilterRequestCompletionRoutine(
 	{
 		status = WdfRequestRetrieveOutputBuffer(Request, OutputBufferLength, &buffer, &bufSize );
 		if (!NT_SUCCESS(status)) {
-			DbgPrint("Filter!WdfRequestRetrieveOutputBuffer failed: 0x%x\n", status);
+			DbgPrint("Filter!%s!WdfRequestRetrieveOutputBuffer failed: 0x%x\n", deviceContext->Name, status);
 			goto exit;
 		}
-		printBufferContent(buffer, bufSize);
+		printBufferContent(buffer, bufSize, deviceContext->Name);
 	}
 
 exit:
@@ -385,7 +388,8 @@ exit:
 VOID
 FilterForwardRequestWithCompletionRoutine(
     IN WDFREQUEST Request,
-    IN WDFIOTARGET Target
+    IN WDFIOTARGET Target,
+	IN PDEVICEFILTER_CONTEXT deviceContext
     )
 {
     BOOLEAN ret;
@@ -399,7 +403,7 @@ FilterForwardRequestWithCompletionRoutine(
 
     WdfRequestSetCompletionRoutine(Request,
                                 FilterRequestCompletionRoutine,
-                                WDF_NO_CONTEXT);
+                                deviceContext);
 
     ret = WdfRequestSend(Request,
                          Target,
@@ -407,7 +411,7 @@ FilterForwardRequestWithCompletionRoutine(
 
     if (ret == FALSE) {
         status = WdfRequestGetStatus (Request);
-        DbgPrint("Filter!WdfRequestSend failed: 0x%x\n", status);
+        DbgPrint("Filter!%s!WdfRequestSend failed: 0x%x\n",deviceContext->Name, status);
         WdfRequestComplete(Request, status);
     }
 
@@ -429,11 +433,13 @@ FilterEvtIoDeviceControl(
     //DbgPrint("Filter!Begin FilterEvtIoDeviceControl\n");
 
     device = WdfIoQueueGetDevice(Queue);
+	PDEVICEFILTER_CONTEXT deviceContext = GetDeviceContext(device);
+	
 	
 	PIRP irp = WdfRequestWdmGetIrp(Request);
 		
 	CHAR info[256];
-	DbgPrint("Filter!Receive %s InputBufferLength=%u OutputBufferLength=%u\n",IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength);
+	DbgPrint("Filter!%s!Receive %s InputBufferLength=%u OutputBufferLength=%u\n",deviceContext->Name, IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength);
 
 	PVOID  buffer = NULL;
 	size_t  bufSize = 0;
@@ -441,12 +447,12 @@ FilterEvtIoDeviceControl(
 	{
 		status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
 		if (!NT_SUCCESS(status)) {
-			DbgPrint("Filter!WdfRequestRetrieveInputBuffer failed: 0x%x\n", status);
+			DbgPrint("Filter!%s!WdfRequestRetrieveInputBuffer failed: 0x%x\n", deviceContext->Name, status);
 			WdfRequestComplete(Request, status);
 			goto exit;
 			return;
 		}
-		printBufferContent(buffer, bufSize);
+		printBufferContent(buffer, bufSize, deviceContext->Name);
 	}
 	
 	PBTH_AUTHENTICATE_RESPONSE authResponse;
@@ -459,24 +465,23 @@ FilterEvtIoDeviceControl(
 			ULONG highAddress = (authResponse->address >> 32);
 			ULONG lowAddress = ((authResponse->address << 32) >> 32);
 			RtlCopyMemory(pin, authResponse->info.pin, BTH_MAX_PIN_SIZE);
-			DbgPrint("Filter!pin=[%s] pin length=%u BT addr=%02X %02X %02X %02X %02X %02X\n", pin, authResponse->info.pinLength, ((highAddress >> 8) & 0xFF), (highAddress & 0xFF), ((lowAddress >> 24) & 0xFF), ((lowAddress >> 16) & 0xFF), ((lowAddress >> 8) & 0xFF), (lowAddress & 0xFF));
+			DbgPrint("Filter!%s!pin=[%s] pin length=%u BT addr=%02X %02X %02X %02X %02X %02X\n", deviceContext->Name, pin, authResponse->info.pinLength, ((highAddress >> 8) & 0xFF), (highAddress & 0xFF), ((lowAddress >> 24) & 0xFF), ((lowAddress >> 16) & 0xFF), ((lowAddress >> 8) & 0xFF), (lowAddress & 0xFF));
 			if (strcmp(pin,"---") == 0)
 			{
-				DbgPrint("Filter!Replace existing pin with computed wiimote pin\n");
+				DbgPrint("Filter!%s!Replace existing pin with computed wiimote pin\n",deviceContext->Name);
 				RtlZeroMemory(authResponse->info.pin, BTH_MAX_PIN_SIZE);
 				RtlCopyMemory(authResponse->info.pin, &(authResponse->address), 6);
 				authResponse->info.pinLength=6;
-				printBufferContent(buffer, bufSize);
+				printBufferContent(buffer, bufSize, deviceContext->Name);
 			}
 			break;
     }
     
 
-	FilterForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device));
-	//WdmForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device));
+	FilterForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device), deviceContext);
 
 exit:
-	//DbgPrint("Filter!End FilterEvtIoDeviceControl\n");
+	//DbgPrint("Filter!%s!End FilterEvtIoDeviceControl\n",deviceContext->Name);
 
     return;
 }
@@ -555,6 +560,22 @@ NTSTATUS EvtDriverDeviceAdd(WDFDRIVER  Driver, PWDFDEVICE_INIT  DeviceInit)
         DbgPrint("Filter!WdfIoQueueCreate failed 0x%x\n", status);
         goto exit;
     }   
+	
+	PDEVICEFILTER_CONTEXT deviceContext = GetDeviceContext(device);
+	
+	deviceContext->Device = device;
+	
+	CHAR fullDriverName[32] = {0};
+	RtlStringCbPrintfA(fullDriverName, 32-1, "%wZ", &(pWdmLowerDO->DriverObject->DriverName));
+	CHAR *shortDriverName = fullDriverName;
+	if (RtlCompareMemory(fullDriverName, "\\Driver\\", 8) == 8)
+	{
+		shortDriverName = fullDriverName + 8;
+	}
+	CHAR buffer[32];
+	RtlZeroMemory(buffer, 32);
+	RtlStringCbPrintfA(buffer, 32-1, "%p-%s", pWdmLowerDO->DriverObject->DeviceObject, shortDriverName);
+	RtlCopyMemory(deviceContext->Name, buffer, 32);
 			
 exit:    
 	DbgPrint("Filter!End EvtDriverDeviceAdd\n");

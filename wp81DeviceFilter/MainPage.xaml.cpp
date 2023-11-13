@@ -323,49 +323,14 @@ void wp81DeviceFilter::MainPage::Install()
 
 	WCHAR *newValueData = (WCHAR*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 5000);
 	DWORD newValueDataSize = 0;
-	newValueDataSize += appendMultiSz(L"wp81devicefilter", newValueData);
-	newValueDataSize++; // add final \0
-	debug(L"First MultiString:\n");
-	debugMultiSz(newValueData);
-
-	HKEY pdoKey = {};
-	// lumia 520
-	retCode = win32Api.RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"System\\CurrentControlSet\\Enum\\SystemBusQc\\SMD_BT\\4&315a27b&0&4097", 0, KEY_ALL_ACCESS, &pdoKey);
-	if (retCode != ERROR_SUCCESS)
-	{
-		debug(L"Error RegOpenKeyExW : %d\n", retCode);
-		TextTest->Text += L"Failed\n";
-		return;
-	}
-
-	retCode = win32Api.RegSetValueExW(pdoKey, L"UpperFilters", NULL, REG_MULTI_SZ, (BYTE*)newValueData, newValueDataSize * 2);
-	if (retCode != ERROR_SUCCESS)
-	{
-		debug(L"Error RegSetValueExW 'UpperFilters': %d\n", retCode);
-		TextTest->Text += L"Failed\n";
-		return;
-	}
-
-	retCode = win32Api.RegCloseKey(pdoKey);
-	if (retCode != ERROR_SUCCESS)
-	{
-		debug(L"Error RegCloseKey 'pdoKey': %d\n", retCode);
-		TextTest->Text += L"Failed\n";
-		return;
-	}
-
-	//// Set wp81devicefilter as an upper filter of Bluetooth class
-
-	//newValueDataSize = 0;
-	//newValueDataSize += appendMultiSz(L"bthl2cap", newValueData + newValueDataSize); 
-	//newValueDataSize += appendMultiSz(L"bthl2cap", newValueData + newValueDataSize);
-	//newValueDataSize += appendMultiSz(L"wp81devicefilter", newValueData + newValueDataSize);
+	//newValueDataSize += appendMultiSz(L"wp81devicefilter", newValueData);
 	//newValueDataSize++; // add final \0
-	//debug(L"Second MultiString:\n");
+	//debug(L"First MultiString:\n");
 	//debugMultiSz(newValueData);
 
+	HKEY pdoKey = {};
 	//// lumia 520
-	//retCode = win32Api.RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"System\\CurrentControlSet\\Control\\Class\\{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}", 0, KEY_ALL_ACCESS, &pdoKey);
+	//retCode = win32Api.RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"System\\CurrentControlSet\\Enum\\SystemBusQc\\SMD_BT\\4&315a27b&0&4097", 0, KEY_ALL_ACCESS, &pdoKey);
 	//if (retCode != ERROR_SUCCESS)
 	//{
 	//	debug(L"Error RegOpenKeyExW : %d\n", retCode);
@@ -388,6 +353,41 @@ void wp81DeviceFilter::MainPage::Install()
 	//	TextTest->Text += L"Failed\n";
 	//	return;
 	//}
+
+	//// Set wp81devicefilter as an upper filter of Bluetooth class
+
+	newValueDataSize = 0;
+	newValueDataSize += appendMultiSz(L"bthl2cap", newValueData + newValueDataSize); 
+//	newValueDataSize += appendMultiSz(L"bthl2cap", newValueData + newValueDataSize);
+	newValueDataSize += appendMultiSz(L"wp81devicefilter", newValueData + newValueDataSize);
+	newValueDataSize++; // add final \0
+	debug(L"Second MultiString:\n");
+	debugMultiSz(newValueData);
+
+	// lumia 520
+	retCode = win32Api.RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"System\\CurrentControlSet\\Control\\Class\\{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}", 0, KEY_ALL_ACCESS, &pdoKey);
+	if (retCode != ERROR_SUCCESS)
+	{
+		debug(L"Error RegOpenKeyExW : %d\n", retCode);
+		TextTest->Text += L"Failed\n";
+		return;
+	}
+
+	retCode = win32Api.RegSetValueExW(pdoKey, L"UpperFilters", NULL, REG_MULTI_SZ, (BYTE*)newValueData, newValueDataSize * 2);
+	if (retCode != ERROR_SUCCESS)
+	{
+		debug(L"Error RegSetValueExW 'UpperFilters': %d\n", retCode);
+		TextTest->Text += L"Failed\n";
+		return;
+	}
+
+	retCode = win32Api.RegCloseKey(pdoKey);
+	if (retCode != ERROR_SUCCESS)
+	{
+		debug(L"Error RegCloseKey 'pdoKey': %d\n", retCode);
+		TextTest->Text += L"Failed\n";
+		return;
+	}
 
 	TextTest->Text += L"OK\n";
 
