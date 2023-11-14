@@ -47,6 +47,105 @@ typedef struct _BTH_AUTHENTICATE_RESPONSE {
 	ULONG unknown7;
 } BTH_AUTHENTICATE_RESPONSE, *PBTH_AUTHENTICATE_RESPONSE;
 
+CHAR* IrpMajorFunction(UCHAR MajorFunction, CHAR* buffer, size_t bufSize)
+{
+	RtlZeroMemory(buffer, bufSize);
+	CHAR functionCode[16];
+	
+	switch(MajorFunction)
+	{
+		case 0x00:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_CREATE");
+			break;
+		case 0x01:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_CREATE_NAMED_PIPE");
+			break;
+		case 0x02:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_CLOSE");
+			break;
+		case 0x03:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_READ");
+			break;
+		case 0x04:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_WRITE");
+			break;
+		case 0x05:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_QUERY_INFORMATION");
+			break;
+		case 0x06:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_SET_INFORMATION");
+			break;
+		case 0x07:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_QUERY_EA");
+			break;
+		case 0x08:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_SET_EA");
+			break;
+		case 0x09:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_FLUSH_BUFFERS");
+			break;
+		case 0x0A:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_QUERY_VOLUME_INFORMATION");
+			break;
+		case 0x0B:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_SET_VOLUME_INFORMATION");
+			break;
+		case 0x0C:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_DIRECTORY_CONTROL");
+			break;
+		case 0x0D:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_FILE_SYSTEM_CONTROL");
+			break;
+		case 0x0E:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_DEVICE_CONTROL");
+			break;
+		case 0x0F:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_INTERNAL_DEVICE_CONTROL");
+			break;
+		case 0x10:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_SHUTDOWN");
+			break;
+		case 0x11:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_LOCK_CONTROL");
+			break;
+		case 0x12:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_CLEANUP");
+			break;
+		case 0x13:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_CREATE_MAILSLOT");
+			break;
+		case 0x14:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_QUERY_SECURITY");
+			break;
+		case 0x15:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_SET_SECURITY");
+			break;
+		case 0x16:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_POWER");
+			break;
+		case 0x17:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_SYSTEM_CONTROL");
+			break;
+		case 0x18:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_DEVICE_CHANGE");
+			break;
+		case 0x19:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_QUERY_QUOTA");
+			break;
+		case 0x1A:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_SET_QUOTA");
+			break;
+		case 0x1B:
+			RtlStringCbCatA(buffer, bufSize, "IRP_MJ_PNP");
+			break;		
+		default:
+			RtlStringCbCatA(buffer, bufSize, "UNKNOWN");
+	}
+	RtlStringCbPrintfA(functionCode, 16, "(0x%02X) ", MajorFunction);
+	RtlStringCbCatA(buffer, bufSize, functionCode);
+
+	return buffer;
+}
 
 CHAR* IoControlCodeInfo(ULONG IoControlCode, CHAR* buffer, size_t bufSize)
 {
@@ -240,7 +339,7 @@ CHAR* IoControlCodeInfo(ULONG IoControlCode, CHAR* buffer, size_t bufSize)
 		default:
 			RtlStringCbCatA(buffer, bufSize, "UNKNOWN");		
 	}
-	RtlStringCbPrintfA(ioctl, 16, "(0x%6X) ", IoControlCode);
+	RtlStringCbPrintfA(ioctl, 16, "(0x%06X) ", IoControlCode);
 	RtlStringCbCatA(buffer, bufSize, ioctl);
 
 	RtlZeroMemory(unknown, 32);
@@ -362,22 +461,30 @@ FilterRequestCompletionRoutine(
 	PDEVICEFILTER_CONTEXT deviceContext = Context;
 
 	PIRP irp = WdfRequestWdmGetIrp(Request);
+
+	UCHAR MajorFunction = irp->Tail.Overlay.CurrentStackLocation->MajorFunction;
+	UCHAR MinorFunction = irp->Tail.Overlay.CurrentStackLocation->MinorFunction;
+	CHAR info[256];
+	DbgPrint("Filter!%s!Complet MajorFunction=%s MinorFunction=0x%02X IoStatus.Status=0x%X IoStatus.Information=0x%X\n", deviceContext->Name, IrpMajorFunction(MajorFunction, info, 256), MinorFunction, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
 	
-	size_t  OutputBufferLength = irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength;	
-	DbgPrint("Filter!%s!Complet IoControlCode=0x%06X OutputBufferLength=%u IoStatus.Status=0x%x IoStatus.Information=0x%x\n", deviceContext->Name, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, OutputBufferLength, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
-
-	PVOID  buffer = NULL;
-	size_t  bufSize = 0;
-	if (OutputBufferLength > 0)
+	if (MajorFunction == IRP_MJ_DEVICE_CONTROL || MajorFunction == IRP_MJ_INTERNAL_DEVICE_CONTROL)
 	{
-		status = WdfRequestRetrieveOutputBuffer(Request, OutputBufferLength, &buffer, &bufSize );
-		if (!NT_SUCCESS(status)) {
-			DbgPrint("Filter!%s!WdfRequestRetrieveOutputBuffer failed: 0x%x\n", deviceContext->Name, status);
-			goto exit;
-		}
-		printBufferContent(buffer, bufSize, deviceContext->Name);
-	}
+		size_t  OutputBufferLength = irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength;	
+		DbgPrint("Filter!%s!Complet IoControlCode=0x%06X OutputBufferLength=%u\n", deviceContext->Name, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, OutputBufferLength);
 
+		PVOID  buffer = NULL;
+		size_t  bufSize = 0;
+		if (OutputBufferLength > 0)
+		{
+			status = WdfRequestRetrieveOutputBuffer(Request, OutputBufferLength, &buffer, &bufSize );
+			if (!NT_SUCCESS(status)) {
+				DbgPrint("Filter!%s!WdfRequestRetrieveOutputBuffer failed: 0x%x\n", deviceContext->Name, status);
+				goto exit;
+			}
+			printBufferContent(buffer, bufSize, deviceContext->Name);
+		}
+	}
+	
 exit:
     WdfRequestComplete(Request, CompletionParams->IoStatus.Status);
 
@@ -455,33 +562,142 @@ FilterEvtIoDeviceControl(
 		printBufferContent(buffer, bufSize, deviceContext->Name);
 	}
 	
-	PBTH_AUTHENTICATE_RESPONSE authResponse;
-	CHAR pin[BTH_MAX_PIN_SIZE+1];
-	RtlZeroMemory(&pin, sizeof(pin));
+	FilterForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device), deviceContext);
 
-    switch (IoControlCode) {
-		case 0x411004: // IOCTL_BTH_AUTH_RESPONSE
-			authResponse = buffer;
-			ULONG highAddress = (authResponse->address >> 32);
-			ULONG lowAddress = ((authResponse->address << 32) >> 32);
-			RtlCopyMemory(pin, authResponse->info.pin, BTH_MAX_PIN_SIZE);
-			DbgPrint("Filter!%s!pin=[%s] pin length=%u BT addr=%02X %02X %02X %02X %02X %02X\n", deviceContext->Name, pin, authResponse->info.pinLength, ((highAddress >> 8) & 0xFF), (highAddress & 0xFF), ((lowAddress >> 24) & 0xFF), ((lowAddress >> 16) & 0xFF), ((lowAddress >> 8) & 0xFF), (lowAddress & 0xFF));
-			if (strcmp(pin,"---") == 0)
-			{
-				DbgPrint("Filter!%s!Replace existing pin with computed wiimote pin\n",deviceContext->Name);
-				RtlZeroMemory(authResponse->info.pin, BTH_MAX_PIN_SIZE);
-				RtlCopyMemory(authResponse->info.pin, &(authResponse->address), 6);
-				authResponse->info.pinLength=6;
-				printBufferContent(buffer, bufSize, deviceContext->Name);
-			}
-			break;
-    }
+exit:
+	//DbgPrint("Filter!%s!End FilterEvtIoDeviceControl\n",deviceContext->Name);
+
+    return;
+}
+
+
+VOID
+FilterEvtIoInternalDeviceControl(
+    IN WDFQUEUE      Queue,
+    IN WDFREQUEST    Request,
+    IN size_t        OutputBufferLength,
+    IN size_t        InputBufferLength,
+    IN ULONG         IoControlCode
+    )
+{
+    NTSTATUS                        status = STATUS_SUCCESS;
+    WDFDEVICE                       device;
+
+    //DbgPrint("Filter!Begin FilterEvtIoInternalDeviceControl\n");
+
+    device = WdfIoQueueGetDevice(Queue);
+	PDEVICEFILTER_CONTEXT deviceContext = GetDeviceContext(device);
+	
+	
+	PIRP irp = WdfRequestWdmGetIrp(Request);
+		
+	CHAR info[256];
+	DbgPrint("Filter!%s!Receive Internal %s InputBufferLength=%u OutputBufferLength=%u\n",deviceContext->Name, IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength);
+
+	PVOID  buffer = NULL;
+	size_t  bufSize = 0;
+	if (InputBufferLength > 0)
+	{
+		status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
+		if (!NT_SUCCESS(status)) {
+			DbgPrint("Filter!%s!WdfRequestRetrieveInputBuffer failed: 0x%x\n", deviceContext->Name, status);
+			WdfRequestComplete(Request, status);
+			goto exit;
+			return;
+		}
+		printBufferContent(buffer, bufSize, deviceContext->Name);
+	}
+	
     
 
 	FilterForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device), deviceContext);
 
 exit:
-	//DbgPrint("Filter!%s!End FilterEvtIoDeviceControl\n",deviceContext->Name);
+	//DbgPrint("Filter!%s!End FilterEvtIoInternalDeviceControl\n",deviceContext->Name);
+
+    return;
+}
+
+
+VOID
+FilterEvtIoDefault(
+    IN WDFQUEUE      Queue,
+    IN WDFREQUEST    Request
+    )
+{
+    NTSTATUS                        status = STATUS_SUCCESS;
+    WDFDEVICE                       device;
+
+    //DbgPrint("Filter!Begin FilterEvtIoDefault\n");
+
+    device = WdfIoQueueGetDevice(Queue);
+	PDEVICEFILTER_CONTEXT deviceContext = GetDeviceContext(device);
+	
+	
+	PIRP irp = WdfRequestWdmGetIrp(Request);
+		
+	DbgPrint("Filter!%s!Receive Default\n",deviceContext->Name);
+
+
+	FilterForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device), deviceContext);
+
+	//DbgPrint("Filter!%s!End FilterEvtIoDefault\n",deviceContext->Name);
+
+    return;
+}
+
+VOID
+FilterEvtIoRead(
+    IN WDFQUEUE      Queue,
+    IN WDFREQUEST    Request,
+	size_t Length
+    )
+{
+    NTSTATUS                        status = STATUS_SUCCESS;
+    WDFDEVICE                       device;
+
+    //DbgPrint("Filter!Begin FilterEvtIoRead\n");
+
+    device = WdfIoQueueGetDevice(Queue);
+	PDEVICEFILTER_CONTEXT deviceContext = GetDeviceContext(device);
+	
+	
+	PIRP irp = WdfRequestWdmGetIrp(Request);
+		
+	DbgPrint("Filter!%s!Receive Read Length=%u\n",deviceContext->Name, Length);
+
+
+	FilterForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device), deviceContext);
+
+	//DbgPrint("Filter!%s!End FilterEvtIoRead\n",deviceContext->Name);
+
+    return;
+}
+
+VOID
+FilterEvtIoWrite(
+    IN WDFQUEUE      Queue,
+    IN WDFREQUEST    Request,
+	size_t Length
+    )
+{
+    NTSTATUS                        status = STATUS_SUCCESS;
+    WDFDEVICE                       device;
+
+    //DbgPrint("Filter!Begin FilterEvtIoWrite\n");
+
+    device = WdfIoQueueGetDevice(Queue);
+	PDEVICEFILTER_CONTEXT deviceContext = GetDeviceContext(device);
+	
+	
+	PIRP irp = WdfRequestWdmGetIrp(Request);
+		
+	DbgPrint("Filter!%s!Receive Write Length=%u\n",deviceContext->Name, Length);
+
+
+	FilterForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device), deviceContext);
+
+	//DbgPrint("Filter!%s!End FilterEvtIoWrite\n",deviceContext->Name);
 
     return;
 }
@@ -549,8 +765,12 @@ NTSTATUS EvtDriverDeviceAdd(WDFDRIVER  Driver, PWDFDEVICE_INIT  DeviceInit)
 				
 	WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&ioQueueConfig, WdfIoQueueDispatchParallel);	
 	
+	ioQueueConfig.EvtIoDefault = FilterEvtIoDefault;
+	ioQueueConfig.EvtIoRead = FilterEvtIoRead;
+	ioQueueConfig.EvtIoWrite = FilterEvtIoWrite;
 	ioQueueConfig.EvtIoDeviceControl = FilterEvtIoDeviceControl;
-
+	ioQueueConfig.EvtIoInternalDeviceControl = FilterEvtIoInternalDeviceControl;
+	
 	status = WdfIoQueueCreate(device,
                             &ioQueueConfig,
                             WDF_NO_OBJECT_ATTRIBUTES,
