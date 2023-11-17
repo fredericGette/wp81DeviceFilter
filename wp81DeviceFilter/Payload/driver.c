@@ -8,6 +8,8 @@
 //      BthMini x3		lumia520: System\\CurrentControlSet\\Enum\\SystemBusQc\\SMD_BT\\4&315a27b&0&4097
 //          |
 //     QcBluetooth x2
+//
+// https://github.com/uri247/wdk80/blob/67e3dc8fada017ff2f49fefb9ac670a955a27e36/Bluetooth%20Serial%20HCI%20Bus%20Driver/Solution/Fdo.c
 
 #include <ntifs.h>
 #include <wdf.h>
@@ -46,6 +48,67 @@ typedef struct _BTH_AUTHENTICATE_RESPONSE {
 	ULONG unknown6;
 	ULONG unknown7;
 } BTH_AUTHENTICATE_RESPONSE, *PBTH_AUTHENTICATE_RESPONSE;
+
+typedef enum _BTHX_HCI_PACKET_TYPE {
+    HciPacketCommand    = 0x01,
+    HciPacketAclData    = 0x02,
+    HciPacketEvent      = 0x04
+} BTHX_HCI_PACKET_TYPE;
+
+#pragma pack(1)
+typedef struct _BTHX_HCI_READ_WRITE_CONTEXT {
+    ULONG   DataLen;    // Size of Data
+    UCHAR   Type;       // Packet Type
+    _Field_size_bytes_(DataLen) UCHAR   Data[1];    // Actual data
+} BTHX_HCI_READ_WRITE_CONTEXT, *PBTHX_HCI_READ_WRITE_CONTEXT;
+#pragma pack(8)
+
+CHAR* StatusDesc(ULONG Status, CHAR* buffer, size_t bufSize)
+{
+	RtlZeroMemory(buffer, bufSize);
+	CHAR StatusValue[16];
+	
+	switch(Status)
+	{
+		case 0x00000000:
+			RtlStringCbCatA(buffer, bufSize, "STATUS_SUCCESS");
+			break;		
+		case 0xC0000120:
+			RtlStringCbCatA(buffer, bufSize, "STATUS_CANCELLED");
+			break;
+		default:
+			RtlStringCbCatA(buffer, bufSize, "UNKNOWN");
+	}
+	RtlStringCbPrintfA(StatusValue, 16, "(0x%08X) ", Status);
+	RtlStringCbCatA(buffer, bufSize, StatusValue);
+
+	return buffer;
+}
+
+CHAR* HciPacketType(BTHX_HCI_PACKET_TYPE type, CHAR* buffer, size_t bufSize)
+{
+	RtlZeroMemory(buffer, bufSize);
+	CHAR packetType[16];
+	
+	switch(type)
+	{
+		case HciPacketCommand:
+			RtlStringCbCatA(buffer, bufSize, "HciPacketCommand");
+			break;
+		case HciPacketAclData:
+			RtlStringCbCatA(buffer, bufSize, "HciPacketAclData");
+			break;
+		case HciPacketEvent:
+			RtlStringCbCatA(buffer, bufSize, "HciPacketEvent");
+			break;
+		default:
+			RtlStringCbCatA(buffer, bufSize, "UNKNOWN");
+	}
+	RtlStringCbPrintfA(packetType, 16, "(0x%02X) ", type);
+	RtlStringCbCatA(buffer, bufSize, packetType);
+
+	return buffer;
+}
 
 CHAR* IrpMajorFunction(UCHAR MajorFunction, CHAR* buffer, size_t bufSize)
 {
@@ -153,7 +216,6 @@ CHAR* IoControlCodeInfo(ULONG IoControlCode, CHAR* buffer, size_t bufSize)
 	CHAR unknown[32];
 	CHAR ioctl[16];
 
-	RtlStringCbCatA(buffer, bufSize, "IoControlCode=");
 	switch(IoControlCode)
 	{
 		case 0x220003:
@@ -240,6 +302,21 @@ CHAR* IoControlCodeInfo(ULONG IoControlCode, CHAR* buffer, size_t bufSize)
 		case 0x41021c:
 			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_SDP_SUBMIT_RECORD_WITH_INFO");
 			break;
+		case 0x410403:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHX_GET_VERSION");
+			break;
+		case 0x410407:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHX_SET_VERSION");
+			break;
+		case 0x41040b:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHX_QUERY_CAPABILITIES");
+			break;
+		case 0x41040f:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHX_WRITE_HCI");
+			break;
+		case 0x410413:
+			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTHX_READ_HCI");
+			break;			
 		case 0x411000:
 			RtlStringCbCatA(buffer, bufSize, "IOCTL_BTH_INQUIRY_DEVICE");
 			break;
@@ -454,26 +531,34 @@ FilterRequestCompletionRoutine(
     IN WDFCONTEXT                  Context
    )
 {
-	NTSTATUS status;
-	
     UNREFERENCED_PARAMETER(Target);
 	
+	NTSTATUS status;
 	PDEVICEFILTER_CONTEXT deviceContext = Context;
+	size_t OutputBufferLength;
+	PIRP irp;
+	UCHAR MajorFunction;
+	UCHAR MinorFunction;
+	CHAR info1[256];
+	CHAR info2[256];
+	PVOID  buffer = NULL;
+	size_t  bufSize = 0;
 
-	PIRP irp = WdfRequestWdmGetIrp(Request);
+	irp = WdfRequestWdmGetIrp(Request);
 
-	UCHAR MajorFunction = irp->Tail.Overlay.CurrentStackLocation->MajorFunction;
-	UCHAR MinorFunction = irp->Tail.Overlay.CurrentStackLocation->MinorFunction;
-	CHAR info[256];
-	DbgPrint("Filter!%s!Complet MajorFunction=%s MinorFunction=0x%02X IoStatus.Status=0x%X IoStatus.Information=0x%X\n", deviceContext->Name, IrpMajorFunction(MajorFunction, info, 256), MinorFunction, CompletionParams->IoStatus.Status, CompletionParams->IoStatus.Information);
+	MajorFunction = irp->Tail.Overlay.CurrentStackLocation->MajorFunction;
+	MinorFunction = irp->Tail.Overlay.CurrentStackLocation->MinorFunction;
+	
+	DbgPrint("Filter!%s!Complet %s MinorFunction=0x%02X %s IoStatus.Information=0x%X\n", deviceContext->Name, IrpMajorFunction(MajorFunction, info1, 256), MinorFunction, StatusDesc(CompletionParams->IoStatus.Status, info2, 256), CompletionParams->IoStatus.Information);
 	
 	if (MajorFunction == IRP_MJ_DEVICE_CONTROL || MajorFunction == IRP_MJ_INTERNAL_DEVICE_CONTROL)
 	{
-		size_t  OutputBufferLength = irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength;	
-		DbgPrint("Filter!%s!Complet IoControlCode=0x%06X OutputBufferLength=%u\n", deviceContext->Name, irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, OutputBufferLength);
+		OutputBufferLength = irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength;	
+		DbgPrint("Filter!%s!Complet %s (OutputBufferLength=%u or %u)\n", deviceContext->Name, IoControlCodeInfo(irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, info1, 256), OutputBufferLength, CompletionParams->IoStatus.Information);
 
-		PVOID  buffer = NULL;
-		size_t  bufSize = 0;
+		// Looks like this is the real OutputBufferLength
+		OutputBufferLength = CompletionParams->IoStatus.Information;
+		
 		if (OutputBufferLength > 0)
 		{
 			status = WdfRequestRetrieveOutputBuffer(Request, OutputBufferLength, &buffer, &bufSize );
@@ -481,7 +566,8 @@ FilterRequestCompletionRoutine(
 				DbgPrint("Filter!%s!WdfRequestRetrieveOutputBuffer failed: 0x%x\n", deviceContext->Name, status);
 				goto exit;
 			}
-			printBufferContent(buffer, bufSize, deviceContext->Name);
+			//printBufferContent(buffer, bufSize, deviceContext->Name);
+			printBufferContent(buffer, OutputBufferLength, deviceContext->Name);
 		}
 	}
 	
@@ -526,6 +612,35 @@ FilterForwardRequestWithCompletionRoutine(
 }
 
 VOID
+FilterForwardRequest(
+    IN WDFREQUEST Request,
+    IN WDFIOTARGET Target,
+	IN PDEVICEFILTER_CONTEXT deviceContext
+    )
+{
+    WDF_REQUEST_SEND_OPTIONS options;
+    BOOLEAN ret;
+    NTSTATUS status;
+
+    //
+    // We are not interested in post processing the IRP so 
+    // fire and forget.
+    //
+    WDF_REQUEST_SEND_OPTIONS_INIT(&options,
+                                  WDF_REQUEST_SEND_OPTION_SEND_AND_FORGET);
+
+    ret = WdfRequestSend(Request, Target, &options);
+
+    if (ret == FALSE) {
+        status = WdfRequestGetStatus (Request);
+        DbgPrint("Filter!%s!WdfRequestSend failed: 0x%x\n",deviceContext->Name, status);
+        WdfRequestComplete(Request, status);
+    }
+
+    return;
+}
+
+VOID
 FilterEvtIoDeviceControl(
     IN WDFQUEUE      Queue,
     IN WDFREQUEST    Request,
@@ -536,6 +651,11 @@ FilterEvtIoDeviceControl(
 {
     NTSTATUS                        status = STATUS_SUCCESS;
     WDFDEVICE                       device;
+	CHAR info[256];
+	PVOID  buffer = NULL;
+	size_t  bufSize = 0;
+	BTHX_HCI_PACKET_TYPE PacketType;
+	PBTHX_HCI_READ_WRITE_CONTEXT HCIContext;
 
     //DbgPrint("Filter!Begin FilterEvtIoDeviceControl\n");
 
@@ -543,13 +663,10 @@ FilterEvtIoDeviceControl(
 	PDEVICEFILTER_CONTEXT deviceContext = GetDeviceContext(device);
 	
 	
-	PIRP irp = WdfRequestWdmGetIrp(Request);
+	// PIRP irp = WdfRequestWdmGetIrp(Request);
 		
-	CHAR info[256];
 	DbgPrint("Filter!%s!Receive %s InputBufferLength=%u OutputBufferLength=%u\n",deviceContext->Name, IoControlCodeInfo(IoControlCode,info,256), InputBufferLength, OutputBufferLength);
-
-	PVOID  buffer = NULL;
-	size_t  bufSize = 0;
+	
 	if (InputBufferLength > 0)
 	{
 		status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
@@ -559,9 +676,23 @@ FilterEvtIoDeviceControl(
 			goto exit;
 			return;
 		}
+		
+		if (IoControlCode == 0x410413)
+		{
+			PacketType = *((BTHX_HCI_PACKET_TYPE *) buffer);
+			DbgPrint("Filter!%s!Receive HCI read type=%s\n",deviceContext->Name, HciPacketType(PacketType,info,256));
+		}
+		else if (IoControlCode == 0x41040F)
+		{
+			HCIContext = (PBTHX_HCI_READ_WRITE_CONTEXT) buffer;
+			PacketType = (BTHX_HCI_PACKET_TYPE) HCIContext->Type; 
+			DbgPrint("Filter!%s!Receive HCI write type=%s\n",deviceContext->Name, HciPacketType(PacketType,info,256));
+		}
+
 		printBufferContent(buffer, bufSize, deviceContext->Name);
 	}
 	
+	//FilterForwardRequest(Request, WdfDeviceGetIoTarget(device), deviceContext);
 	FilterForwardRequestWithCompletionRoutine(Request, WdfDeviceGetIoTarget(device), deviceContext);
 
 exit:
@@ -764,12 +895,13 @@ NTSTATUS EvtDriverDeviceAdd(WDFDRIVER  Driver, PWDFDEVICE_INIT  DeviceInit)
 	
 				
 	WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&ioQueueConfig, WdfIoQueueDispatchParallel);	
+	//WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&ioQueueConfig, WdfIoQueueDispatchSequential);	
 	
-	ioQueueConfig.EvtIoDefault = FilterEvtIoDefault;
-	ioQueueConfig.EvtIoRead = FilterEvtIoRead;
-	ioQueueConfig.EvtIoWrite = FilterEvtIoWrite;
+	//ioQueueConfig.EvtIoDefault = FilterEvtIoDefault;
+	//ioQueueConfig.EvtIoRead = FilterEvtIoRead;
+	//ioQueueConfig.EvtIoWrite = FilterEvtIoWrite;
 	ioQueueConfig.EvtIoDeviceControl = FilterEvtIoDeviceControl;
-	ioQueueConfig.EvtIoInternalDeviceControl = FilterEvtIoInternalDeviceControl;
+	//ioQueueConfig.EvtIoInternalDeviceControl = FilterEvtIoInternalDeviceControl;
 	
 	status = WdfIoQueueCreate(device,
                             &ioQueueConfig,

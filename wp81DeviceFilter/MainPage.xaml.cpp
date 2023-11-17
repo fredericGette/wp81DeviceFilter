@@ -381,6 +381,20 @@ void wp81DeviceFilter::MainPage::Install()
 		return;
 	}
 
+	newValueDataSize = 0;
+	newValueDataSize += appendMultiSz(L"wp81devicefilter", newValueData + newValueDataSize);
+	newValueDataSize++; // add final \0
+	debug(L"Third MultiString:\n");
+	debugMultiSz(newValueData);
+
+	retCode = win32Api.RegSetValueExW(pdoKey, L"LowerFilters", NULL, REG_MULTI_SZ, (BYTE*)newValueData, newValueDataSize * 2);
+	if (retCode != ERROR_SUCCESS)
+	{
+		debug(L"Error RegSetValueExW 'LowerFilters': %d\n", retCode);
+		TextTest->Text += L"Failed\n";
+		return;
+	}
+
 	retCode = win32Api.RegCloseKey(pdoKey);
 	if (retCode != ERROR_SUCCESS)
 	{
