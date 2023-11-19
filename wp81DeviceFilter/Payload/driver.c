@@ -63,6 +63,343 @@ typedef struct _BTHX_HCI_READ_WRITE_CONTEXT {
 } BTHX_HCI_READ_WRITE_CONTEXT, *PBTHX_HCI_READ_WRITE_CONTEXT;
 #pragma pack(8)
 
+CHAR* ErrorCodeDesc(UCHAR ErrorCode, CHAR* buffer, size_t bufSize)
+{
+	RtlZeroMemory(buffer, bufSize);
+	CHAR ErrorCodeValue[16];
+	
+	// Find what:^  (.*) = (.*),$
+	// Replace with:case \2:\n\tRtlStringCbCatA\(buffer, bufSize, "\1"\);\n\tbreak;
+	switch(ErrorCode)
+	{
+		case 0x00:
+			RtlStringCbCatA(buffer, bufSize, "SUCCESS");
+			break;
+		case 0x01:
+			RtlStringCbCatA(buffer, bufSize, "UNKNOWN_HCI_COMMAND");
+			break;
+		case 0x02:
+			RtlStringCbCatA(buffer, bufSize, "UNKNOWN_CONNECTION");
+			break;
+		case 0x03:
+			RtlStringCbCatA(buffer, bufSize, "HARDWARE_FAILURE");
+			break;
+		case 0x04:
+			RtlStringCbCatA(buffer, bufSize, "PAGE_TIMEOUT");
+			break;
+		case 0x05:
+			RtlStringCbCatA(buffer, bufSize, "AUTHENTICATION_FAILURE");
+			break;
+		case 0x06:
+			RtlStringCbCatA(buffer, bufSize, "PIN_OR_KEY_MISSING");
+			break;
+		case 0x07:
+			RtlStringCbCatA(buffer, bufSize, "MEMORY_CAPACITY_EXCEEDED");
+			break;
+		case 0x08:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_TIMEOUT");
+			break;
+		case 0x09:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_LIMIT_EXCEEDED");
+			break;
+		case 0x0A:
+			RtlStringCbCatA(buffer, bufSize, "SYNCHRONOUS_CONNECTION_LIMIT_EXCEEDED");
+			break;
+		case 0x0B:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_ALREADY_EXISTS");
+			break;
+		case 0x0C:
+			RtlStringCbCatA(buffer, bufSize, "COMMAND_DISALLOWED");
+			break;
+		case 0x0D:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_REJECTED_LIMITED_RESOURCES");
+			break;
+		case 0x0E:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_REJECTED_SECURITY_REASONS");
+			break;
+		case 0x0F:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_REJECTED_UNACCEPTABLE_BD_ADDR");
+			break;
+		case 0x10:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_ACCEPT_TIMEOUT");
+			break;
+		case 0x11:
+			RtlStringCbCatA(buffer, bufSize, "UNSUPORTED_FEATURE_OR_PARAMETER_VALUE");
+			break;
+		case 0x12:
+			RtlStringCbCatA(buffer, bufSize, "INVALID_HCI_COMMAND_PARAMETERS");
+			break;
+		case 0x13:
+			RtlStringCbCatA(buffer, bufSize, "REMOTE_USER_TERMINATED_CONNECTION");
+			break;
+		case 0x14:
+			RtlStringCbCatA(buffer, bufSize, "REMOTE_DEVICE_TERMINATED_CONNECTION_LOW_RESOURCES");
+			break;
+		case 0x15:
+			RtlStringCbCatA(buffer, bufSize, "REMOTE_DEVICE_TERMINATED_CONNECTION_POWER_OFF");
+			break;
+		case 0x16:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_TERMINATED_BY_LOCAL_HOST");
+			break;
+		case 0x17:
+			RtlStringCbCatA(buffer, bufSize, "REPEATED_ATTEMPTS");
+			break;
+		case 0x18:
+			RtlStringCbCatA(buffer, bufSize, "PAIRING_NOT_ALLOWED");
+			break;
+		case 0x19:
+			RtlStringCbCatA(buffer, bufSize, "UNKNOWN_LMP_PDU");
+			break;
+		case 0x1A:
+			RtlStringCbCatA(buffer, bufSize, "UNSUPPORTED_REMOTE_OR_LMP_FEATURE");
+			break;
+		case 0x1B:
+			RtlStringCbCatA(buffer, bufSize, "SCO_OFFSET_REJECTED");
+			break;
+		case 0x1C:
+			RtlStringCbCatA(buffer, bufSize, "SCO_INTERVAL_REJECTED");
+			break;
+		case 0x1D:
+			RtlStringCbCatA(buffer, bufSize, "SCO_AIR_MODE_REJECTED");
+			break;
+		case 0x1E:
+			RtlStringCbCatA(buffer, bufSize, "INVALID_LMP_OR_LL_PARAMETERS");
+			break;
+		case 0x1F:
+			RtlStringCbCatA(buffer, bufSize, "UNSPECIFIED_ERROR");
+			break;
+		case 0x20:
+			RtlStringCbCatA(buffer, bufSize, "UNSUPPORTED_LMP_OR_LL_PARAMETER");
+			break;
+		case 0x21:
+			RtlStringCbCatA(buffer, bufSize, "ROLE_CHANGE_NOT_ALLOWED");
+			break;
+		case 0x22:
+			RtlStringCbCatA(buffer, bufSize, "LMP_RESPONSE_TIMEOUT");
+			break;
+		case 0x23:
+			RtlStringCbCatA(buffer, bufSize, "LINK_LAYER_COLLISION");
+			break;
+		case 0x24:
+			RtlStringCbCatA(buffer, bufSize, "LMP_PDU_NOT_ALLOWED");
+			break;
+		case 0x25:
+			RtlStringCbCatA(buffer, bufSize, "ENCRYPTION_MODE_NOT_ACCEPTABLE");
+			break;
+		case 0x26:
+			RtlStringCbCatA(buffer, bufSize, "UNIT_KEY_USED");
+			break;
+		case 0x27:
+			RtlStringCbCatA(buffer, bufSize, "QOS_NOT_SUPPORTED");
+			break;
+		case 0x28:
+			RtlStringCbCatA(buffer, bufSize, "INSTANT_PASSED");
+			break;
+		case 0x29:
+			RtlStringCbCatA(buffer, bufSize, "PAIRING_WITH_UNIT_KEY_NOT_SUPPORTED");
+			break;
+		case 0x35:
+			RtlStringCbCatA(buffer, bufSize, "ROLE_SWITCH_FAILED");
+			break;
+		case 0x3A:
+			RtlStringCbCatA(buffer, bufSize, "CONTROLLER_BUSY");
+			break;
+		case 0x3E:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_FAILED_ESTABLISHMENT");
+			break;		
+		default:
+			RtlStringCbCatA(buffer, bufSize, "UNKNOWN");
+	}
+	RtlStringCbPrintfA(ErrorCodeValue, 16, "(0x%02X) ", ErrorCode);
+	RtlStringCbCatA(buffer, bufSize, ErrorCodeValue);
+
+	return buffer;
+}		
+		
+
+CHAR* EventCodeDesc(UCHAR EventCode, CHAR* buffer, size_t bufSize)
+{
+	RtlZeroMemory(buffer, bufSize);
+	CHAR EventCodeValue[16];
+	
+	// Find what:^  (.*) = (.*),$
+	// Replace with:case \2:\n\tRtlStringCbCatA\(buffer, bufSize, "\1"\);\n\tbreak;
+	switch(EventCode)
+	{
+		case 0x01:
+			RtlStringCbCatA(buffer, bufSize, "INQUIRY_COMPLETE"); // Indicates the Inquiry has finished.
+			break;
+		case 0x02:
+			RtlStringCbCatA(buffer, bufSize, "INQUIRY_RESULT"); // Indicates that Bluetooth device(s) have responded for the inquiry.
+			break;
+		case 0x03:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_COMPLETE"); // Indicates to both hosts that the new connection has been formed.
+			break;
+		case 0x04:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_REQUEST"); // Indicates that a new connection is trying to be established.
+			break;
+		case 0x05:
+			RtlStringCbCatA(buffer, bufSize, "DISCONNECTION_COMPLETE"); // Occurs when a connection has been disconnected.
+			break;
+		case 0x06:
+			RtlStringCbCatA(buffer, bufSize, "AUTHENTICATION_COMPLETE"); // Occurs when an authentication has been completed.
+			break;
+		case 0x07:
+			RtlStringCbCatA(buffer, bufSize, "REMOTE_NAME_REQUEST_COMPLETE"); // Indicates that the request for the remote name has been completed.
+			break;
+		case 0x08:
+			RtlStringCbCatA(buffer, bufSize, "ENCRYPTION_CHANGE"); // Indicates that a change in the encryption has been completed.
+			break;
+		case 0x09:
+			RtlStringCbCatA(buffer, bufSize, "CHANGE_CONNECTION_LINK_KEY_COMPLETE"); // Indicates that the change in the link key has been completed.
+			break;
+		case 0x0A:
+			RtlStringCbCatA(buffer, bufSize, "CENTRAL_LINK_KEY_COMPLETE"); // Indicates that the change in the temporary link key or semi permanent link key on the master device is complete.
+			break;
+		case 0x0B:
+			RtlStringCbCatA(buffer, bufSize, "READ_REMOTE_SUPPORTED_FEATURES_COMPLETE"); // Indicates that the reading of the supported features on the remote device is complete.
+			break;
+		case 0x0C:
+			RtlStringCbCatA(buffer, bufSize, "READ_REMOTE_VERSION_INFORMATION_COMPLETE"); // Indicates that the version number on the remote device has been read and completed.
+			break;
+		case 0x0D:
+			RtlStringCbCatA(buffer, bufSize, "QOS_SETUP_COMPLETE"); // Indicates that the Quality of Service setup has been complete.
+			break;
+		case 0x0E:
+			RtlStringCbCatA(buffer, bufSize, "COMMAND_COMPLETE"); // Used by controller to send status and event parameters to the host for the particular command.
+			break;
+		case 0x0F:
+			RtlStringCbCatA(buffer, bufSize, "COMMAND_STATUS"); // Indicates that the command has been received and is being processed in the host controller.
+			break;
+		case 0x10:
+			RtlStringCbCatA(buffer, bufSize, "HARDWARE_ERROR"); // Indicates a hardware failure of the Bluetooth device.
+			break;
+		case 0x11:
+			RtlStringCbCatA(buffer, bufSize, "FLUSH_OCCURRED"); // Indicates that the data has been flushed for a particular connection.
+			break;
+		case 0x12:
+			RtlStringCbCatA(buffer, bufSize, "ROLE_CHANGE"); // Indicates that the current bluetooth role for a connection has been changed.
+			break;
+		case 0x13:
+			RtlStringCbCatA(buffer, bufSize, "NUMBER_OF_COMPLETED_PACKETS"); // Indicates to the host the number of data packets sent compared to the last time the same event was sent.
+			break;
+		case 0x14:
+			RtlStringCbCatA(buffer, bufSize, "MODE_CHANGE"); // Indicates the change in mode from hold, sniff, park or active to another mode.
+			break;
+		case 0x15:
+			RtlStringCbCatA(buffer, bufSize, "RETURN_LINK_KEYS"); // Used to return stored link keys after a Read_Stored_Link_Key command was issued.
+			break;
+		case 0x16:
+			RtlStringCbCatA(buffer, bufSize, "PIN_CODE_REQUEST"); // Indicates the a PIN code is required for a new connection.
+			break;
+		case 0x17:
+			RtlStringCbCatA(buffer, bufSize, "LINK_KEY_REQUEST"); // Indicates that a link key is required for the connection.
+			break;
+		case 0x18:
+			RtlStringCbCatA(buffer, bufSize, "LINK_KEY_NOTIFICATION"); // Indicates to the host that a new link key has been created.
+			break;
+		case 0x19:
+			RtlStringCbCatA(buffer, bufSize, "LOOPBACK_COMMAND"); // Indicates that command sent from the host will be looped back.
+			break;
+		case 0x1A:
+			RtlStringCbCatA(buffer, bufSize, "DATA_BUFFER_OVERFLOW"); // Indicates that the data buffers on the host has overflowed.
+			break;
+		case 0x1B:
+			RtlStringCbCatA(buffer, bufSize, "MAX_SLOTS_CHANGE"); // Informs the host when the LMP_Max_Slots parameter changes.
+			break;
+		case 0x1C:
+			RtlStringCbCatA(buffer, bufSize, "READ_CLOCK_OFFSET_COMPLETE"); // Indicates the completion of reading the clock offset information.
+			break;
+		case 0x1D:
+			RtlStringCbCatA(buffer, bufSize, "CONNECTION_PACKET_TYPE_CHANGED"); // Indicate the completion of the packet type change for a connection.
+			break;
+		case 0x1E:
+			RtlStringCbCatA(buffer, bufSize, "QOS_VIOLATION"); // Indicates that the link manager is unable to provide the required Quality of Service.
+			break;
+		case 0x1F:
+			RtlStringCbCatA(buffer, bufSize, "PAGE_SCAN_MODE_CHANGE"); // Indicates that the remote device has successfully changed the Page Scan mode.
+			break;
+		case 0x20:
+			RtlStringCbCatA(buffer, bufSize, "PAGE_SCAN_REPETITION_MODE_CHANGE"); // Indicates that the remote device has successfully changed the Page Scan Repetition mode.
+			break;
+		case 0x21:
+			RtlStringCbCatA(buffer, bufSize, "FLOW_SPECIFICATION_COMPLETE");
+			break;
+		case 0x22:
+			RtlStringCbCatA(buffer, bufSize, "INQUIRY_RESULT_WITH_RSSI");
+			break;
+		case 0x23:
+			RtlStringCbCatA(buffer, bufSize, "READ_REMOTE_EXTENDED_FEATURES_COMPLETE");
+			break;
+		case 0x2C:
+			RtlStringCbCatA(buffer, bufSize, "SYNCHRONOUS_CONNECTION_COMPLETE");
+			break;
+		case 0x2D:
+			RtlStringCbCatA(buffer, bufSize, "SYNCHRONOUS_CONNECTION_CHANGED");
+			break;
+		case 0x2E:
+			RtlStringCbCatA(buffer, bufSize, "SNIFF_SUBRATING");
+			break;
+		case 0x2F:
+			RtlStringCbCatA(buffer, bufSize, "EXTENDED_INQUIRY_RESULT");
+			break;
+		case 0x30:
+			RtlStringCbCatA(buffer, bufSize, "ENCRYPTION_KEY_REFRESH_COMPLETE");
+			break;
+		case 0x31:
+			RtlStringCbCatA(buffer, bufSize, "IO_CAPABILITY_REQUEST");
+			break;
+		case 0x32:
+			RtlStringCbCatA(buffer, bufSize, "IO_CAPABILITY_RESPONSE");
+			break;
+		case 0x33:
+			RtlStringCbCatA(buffer, bufSize, "USER_CONFIRMATION_REQUEST");
+			break;
+		case 0x34:
+			RtlStringCbCatA(buffer, bufSize, "USER_PASSKEY_REQUEST");
+			break;
+		case 0x35:
+			RtlStringCbCatA(buffer, bufSize, "REMOTE_OOB_DATA_REQUEST");
+			break;
+		case 0x36:
+			RtlStringCbCatA(buffer, bufSize, "SIMPLE_PAIRING_COMPLETE");
+			break;
+		case 0x38:
+			RtlStringCbCatA(buffer, bufSize, "LINK_SUPERVISION_TIMEOUT_CHANGED");
+			break;
+		case 0x39:
+			RtlStringCbCatA(buffer, bufSize, "ENHANCED_FLUSH_COMPLETE");
+			break;
+		case 0x3B:
+			RtlStringCbCatA(buffer, bufSize, "USER_PASSKEY_NOTIFICATION");
+			break;
+		case 0x3C:
+			RtlStringCbCatA(buffer, bufSize, "KEYPRESS_NOTIFICATION");
+			break;
+		case 0x3D:
+			RtlStringCbCatA(buffer, bufSize, "REMOTE_HOST_SUPPORTED_FEATURES_NOTIFICATION");
+			break;
+		case 0x3e:
+			RtlStringCbCatA(buffer, bufSize, "LE_META_EVENT");
+			break;
+		case 0x48:
+			RtlStringCbCatA(buffer, bufSize, "NUMBER_OF_COMPLETED_DATA_BLOCKS");
+			break;
+		case 0xFE:
+			RtlStringCbCatA(buffer, bufSize, "BLUETOOTH_LOGO_TESTING");
+			break;
+		case 0xFF:
+			RtlStringCbCatA(buffer, bufSize, "VENDOR_SPECIFIC");
+			break;
+		default:
+			RtlStringCbCatA(buffer, bufSize, "UNKNOWN");
+	}
+	RtlStringCbPrintfA(EventCodeValue, 16, "(0x%02X) ", EventCode);
+	RtlStringCbCatA(buffer, bufSize, EventCodeValue);
+
+	return buffer;
+}
+
 CHAR* OGF_OCF_Desc(ULONG OGF, ULONG OCF,CHAR* buffer, size_t bufSize)
 {
 	RtlZeroMemory(buffer, bufSize);
@@ -663,8 +1000,251 @@ CHAR* OGF_OCF_Desc(ULONG OGF, ULONG OCF,CHAR* buffer, size_t bufSize)
 					RtlStringCbCatA(buffer, bufSize, "LE_START_ENCRYPTION"); 
 					break;	
 				case 0x001A:
-					RtlStringCbCatA(buffer, bufSize, ""); 
+					RtlStringCbCatA(buffer, bufSize, "LE_LONG_TERM_KEY_REQUEST_REPLY"); 
 					break;	
+				case 0x001B:
+					RtlStringCbCatA(buffer, bufSize, "LE_LONG_TERM_KEY_REQUEST_NEGATIVE_REPLY"); 
+					break;	
+				case 0x001C:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_SUPPORTED_STATES"); 
+					break;	
+				case 0x001D:
+					RtlStringCbCatA(buffer, bufSize, "LE_RECEIVER_TEST"); 
+					break;	
+				case 0x001E:
+					RtlStringCbCatA(buffer, bufSize, "LE_TRANSMITTER_TEST"); 
+					break;	
+				case 0x001F:
+					RtlStringCbCatA(buffer, bufSize, "LE_TEST_END"); 
+					break;	
+				case 0x0020:
+					RtlStringCbCatA(buffer, bufSize, "LE_REMOTE_CONNECTION_PARAMETER_REQUEST_REPLY"); 
+					break;	
+				case 0x0021:
+					RtlStringCbCatA(buffer, bufSize, "LE_REMOTE_CONNECTION_PARAMETER_REQUEST_NEGATIVE_REPLY"); 
+					break;	
+				case 0x0022:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_DATA_LENGTH"); 
+					break;	
+				case 0x0023:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH"); 
+					break;	
+				case 0x0024:
+					RtlStringCbCatA(buffer, bufSize, "LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGT"); 
+					break;	
+				case 0x0025:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_LOCAL_P_256_PUBLIC_KEY_COMMAND"); 
+					break;	
+				case 0x0026:
+					RtlStringCbCatA(buffer, bufSize, "LE_GENERATE_DHKEY_COMMAND_V1"); 
+					break;	
+				case 0x0027:
+					RtlStringCbCatA(buffer, bufSize, "LE_ADD_DEVICE_TO_RESOLVING_LIST"); 
+					break;	
+				case 0x0028:
+					RtlStringCbCatA(buffer, bufSize, "LE_REMOVE_DEVICE_FROM_RESOLVING_LIST"); 
+					break;	
+				case 0x0029:
+					RtlStringCbCatA(buffer, bufSize, "LE_CLEAR_RESOLVING_LIST "); 
+					break;	
+				case 0x002A:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_RESOLVING_LIST_SIZE "); 
+					break;	
+				case 0x002B:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_PEER_RESOLVABLE_ADDRESS "); 
+					break;	
+				case 0x002C:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_LOCAL_RESOLVABLE_ADDRESS "); 
+					break;	
+				case 0x002D:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_ADDRESS_RESOLUTION_ENABLE "); 
+					break;	
+				case 0x002E:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_RESOLVABLE_PRIVATE_ADDRESS_TIMEOUT"); 
+					break;	
+				case 0x002F:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_MAXIMUM_DATA_LENGTH"); 
+					break;	
+				case 0x0030:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_PHY"); 
+					break;	
+				case 0x0031:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_DEFAULT_PHY"); 
+					break;	
+				case 0x0032:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_PHY"); 
+					break;	
+				case 0x0033:
+					RtlStringCbCatA(buffer, bufSize, "LE_ENHANCED_RECEIVER_TEST"); 
+					break;	
+				case 0x0034:
+					RtlStringCbCatA(buffer, bufSize, "LE_ENHANCED_TRANSMITTER_TEST"); 
+					break;	
+				case 0x0035:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_EXTENDED_ADVERTISING_RANDOM_ADDRESS"); 
+					break;	
+				case 0x0036:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_EXTENDED_ADVERTISING_PARAMETERS"); 
+					break;	
+				case 0x0037:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_EXTENDED_ADVERTISING_DATA"); 
+					break;	
+				case 0x0038:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_EXTENDED_ADVERTISING_SCAN_RESPONSE"); 
+					break;	
+				case 0x0039:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_EXTENDED_ADVERTISING_ENABLE"); 
+					break;	
+				case 0x003A:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH"); 
+					break;	
+				case 0x003B:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS"); 
+					break;	
+				case 0x003C:
+					RtlStringCbCatA(buffer, bufSize, "LE_REMOVE_ADVERTISING_SET"); 
+					break;	
+				case 0x003D:
+					RtlStringCbCatA(buffer, bufSize, "LE_CLEAR_ADVERTISING_SETS"); 
+					break;	
+				case 0x003E:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_PERIODIC_ADVERTISING_PARAM"); 
+					break;	
+				case 0x003F:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_PERIODIC_ADVERTISING_DATA"); 
+					break;	
+				case 0x0040:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_PERIODIC_ADVERTISING_ENABLE");
+					break;
+				case 0x0041:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_EXTENDED_SCAN_PARAMETERS");
+					break;
+				case 0x0042:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_EXTENDED_SCAN_ENABLE");
+					break;
+				case 0x0043:
+					RtlStringCbCatA(buffer, bufSize, "LE_EXTENDED_CREATE_CONNECTION");
+					break;
+				case 0x0044:
+					RtlStringCbCatA(buffer, bufSize, "LE_PERIODIC_ADVERTISING_CREATE_SYNC");
+					break;
+				case 0x0045:
+					RtlStringCbCatA(buffer, bufSize, "LE_PERIODIC_ADVERTISING_CREATE_SYNC_CANCEL");
+					break;
+				case 0x0046:
+					RtlStringCbCatA(buffer, bufSize, "LE_PERIODIC_ADVERTISING_TERMINATE_SYNC");
+					break;
+				case 0x0047:
+					RtlStringCbCatA(buffer, bufSize, "LE_ADD_DEVICE_TO_PERIODIC_ADVERTISING_LIST");
+					break;
+				case 0x0048:
+					RtlStringCbCatA(buffer, bufSize, "LE_REMOVE_DEVICE_FROM_PERIODIC_ADVERTISING_LIST");
+					break;
+				case 0x0049:
+					RtlStringCbCatA(buffer, bufSize, "LE_CLEAR_PERIODIC_ADVERTISING_LIST");
+					break;
+				case 0x004A:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_PERIODIC_ADVERTISING_LIST_SIZE");
+					break;
+				case 0x004B:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_TRANSMIT_POWER");
+					break;
+				case 0x004C:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_RF_PATH_COMPENSATION_POWER");
+					break;
+				case 0x004D:
+					RtlStringCbCatA(buffer, bufSize, "LE_WRITE_RF_PATH_COMPENSATION_POWER");
+					break;
+				case 0x004E:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_PRIVACY_MODE");
+					break;
+				case 0x0059:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_PERIODIC_ADVERTISING_RECEIVE_ENABLE");
+					break;
+				case 0x005A:
+					RtlStringCbCatA(buffer, bufSize, "LE_PERIODIC_ADVERTISING_SYNC_TRANSFER");
+					break;
+				case 0x005B:
+					RtlStringCbCatA(buffer, bufSize, "LE_PERIODIC_ADVERTISING_SET_INFO_TRANSFER");
+					break;
+				case 0x005C:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_PERIODIC_ADVERTISING_SYNC_TRANSFER_PARAMETERS");
+					break;
+				case 0x005D:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_DEFAULT_PERIODIC_ADVERTISING_SYNC_TRANSFER_PARAMETERS");
+					break;
+				case 0x005E:
+					RtlStringCbCatA(buffer, bufSize, "LE_GENERATE_DHKEY_COMMAND");
+					break;
+				case 0x005F:
+					RtlStringCbCatA(buffer, bufSize, "LE_MODIFY_SLEEP_CLOCK_ACCURACY");
+					break;
+				case 0x0060:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_BUFFER_SIZE_V2");
+					break;
+				case 0x0061:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_ISO_TX_SYNC");
+					break;
+				case 0x0062:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_CIG_PARAMETERS");
+					break;
+				case 0x0063:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_CIG_PARAMETERS_TEST");
+					break;
+				case 0x0064:
+					RtlStringCbCatA(buffer, bufSize, "LE_CREATE_CIS");
+					break;
+				case 0x0065:
+					RtlStringCbCatA(buffer, bufSize, "LE_REMOVE_CIG");
+					break;
+				case 0x0066:
+					RtlStringCbCatA(buffer, bufSize, "LE_ACCEPT_CIS_REQUEST");
+					break;
+				case 0x0067:
+					RtlStringCbCatA(buffer, bufSize, "LE_REJECT_CIS_REQUEST");
+					break;
+				case 0x0068:
+					RtlStringCbCatA(buffer, bufSize, "LE_CREATE_BIG");
+					break;
+				case 0x006A:
+					RtlStringCbCatA(buffer, bufSize, "LE_TERMINATE_BIG");
+					break;
+				case 0x006B:
+					RtlStringCbCatA(buffer, bufSize, "LE_BIG_CREATE_SYNC");
+					break;
+				case 0x006C:
+					RtlStringCbCatA(buffer, bufSize, "LE_BIG_TERMINATE_SYNC");
+					break;
+				case 0x006D:
+					RtlStringCbCatA(buffer, bufSize, "LE_REQUEST_PEER_SCA");
+					break;
+				case 0x006E:
+					RtlStringCbCatA(buffer, bufSize, "LE_SETUP_ISO_DATA_PATH");
+					break;
+				case 0x006F:
+					RtlStringCbCatA(buffer, bufSize, "LE_REMOVE_ISO_DATA_PATH");
+					break;
+				case 0x0074:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_HOST_FEATURE");
+					break;
+				case 0x0075:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_ISO_LINK_QUALITY");
+					break;
+				case 0x0076:
+					RtlStringCbCatA(buffer, bufSize, "LE_ENHANCED_READ_TRANSMIT_POWER_LEVEL");
+					break;
+				case 0x0077:
+					RtlStringCbCatA(buffer, bufSize, "LE_READ_REMOTE_TRANSMIT_POWER_LEVEL");
+					break;
+				case 0x0078:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_PATH_LOSS_REPORTING_PARAMETERS");
+					break;
+				case 0x0079:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_PATH_LOSS_REPORTING_ENABLE");
+					break;
+				case 0x007A:
+					RtlStringCbCatA(buffer, bufSize, "LE_SET_TRANSMIT_POWER_REPORTING_ENABLE");
+					break;
 				default:
 					RtlStringCbCatA(buffer, bufSize, "UNKNOWN");			
 			}								
@@ -741,6 +1321,35 @@ CHAR* HciPacketTypeDesc(BTHX_HCI_PACKET_TYPE type, CHAR* buffer, size_t bufSize)
 
 	return buffer;
 }
+
+CHAR* EventDecode(UCHAR* Data, CHAR* buffer, size_t bufSize)
+{
+	RtlZeroMemory(buffer, bufSize);
+
+	UCHAR EventCode = Data[0];
+	UCHAR PayloadLength = Data[1];
+	ULONG OpCode;
+	ULONG OGF;			
+	ULONG OCF;
+	CHAR info1[256];
+	CHAR info2[256];
+
+	switch(EventCode)
+	{
+		case 0x0E:
+			OpCode = Data[4] << 8;// Little-endian
+			OpCode += Data[3];
+			OGF = (OpCode >> 10) & 0x3F;			
+			OCF = OpCode & 0x3FF;
+			RtlStringCbPrintfA(buffer, bufSize, "Num_HCI_Command_Packets=0x%02X Command_Opcode=0x%04X (%s) Return_Parameters=%s", Data[2],OpCode,OGF_OCF_Desc(OGF,OCF,info1,256),ErrorCodeDesc(Data[5],info2,256));
+			break;
+		default:
+			RtlStringCbPrintfA(buffer, bufSize, "TODO");
+	}
+	
+	return buffer;
+}
+
 
 CHAR* IrpMajorFunctionDesc(UCHAR MajorFunction, CHAR* buffer, size_t bufSize)
 {
@@ -1173,8 +1782,13 @@ FilterRequestCompletionRoutine(
 	UCHAR MinorFunction;
 	CHAR info1[256];
 	CHAR info2[256];
+	CHAR info3[256];
 	PVOID  buffer = NULL;
 	size_t  bufSize = 0;
+	ULONG IoControlCode;
+	CHAR logPrintBufferName[256];
+	PBTHX_HCI_READ_WRITE_CONTEXT HCIContext;
+	BTHX_HCI_PACKET_TYPE PacketType;
 
 	irp = WdfRequestWdmGetIrp(Request);
 
@@ -1185,21 +1799,52 @@ FilterRequestCompletionRoutine(
 	
 	if (MajorFunction == IRP_MJ_DEVICE_CONTROL || MajorFunction == IRP_MJ_INTERNAL_DEVICE_CONTROL)
 	{
+		IoControlCode = irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode;
 		OutputBufferLength = irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.OutputBufferLength;	
-		DbgPrint("Filter!%s!Complet %s (OutputBufferLength=%u or %u)\n", deviceContext->Name, IoControlCodeDesc(irp->Tail.Overlay.CurrentStackLocation->Parameters.DeviceIoControl.IoControlCode, info1, 256), OutputBufferLength, CompletionParams->IoStatus.Information);
+		DbgPrint("Filter!%s!Complet %s (OutputBufferLength=%u or %u)\n", deviceContext->Name, IoControlCodeDesc(IoControlCode, info1, 256), OutputBufferLength, CompletionParams->IoStatus.Information);
 
 		// Looks like this is the real OutputBufferLength
 		OutputBufferLength = CompletionParams->IoStatus.Information;
 		
 		if (OutputBufferLength > 0)
 		{
+			RtlZeroMemory(logPrintBufferName, 256);
+			RtlStringCbPrintfA(logPrintBufferName, 256, "%s", deviceContext->Name);
+			
 			status = WdfRequestRetrieveOutputBuffer(Request, OutputBufferLength, &buffer, &bufSize );
 			if (!NT_SUCCESS(status)) {
 				DbgPrint("Filter!%s!WdfRequestRetrieveOutputBuffer failed: 0x%x\n", deviceContext->Name, status);
 				goto exit;
 			}
-			//printBufferContent(buffer, bufSize, deviceContext->Name);
-			printBufferContent(buffer, OutputBufferLength, deviceContext->Name);
+			
+			if (IoControlCode == 0x410413) // HCI read
+			{
+				HCIContext = (PBTHX_HCI_READ_WRITE_CONTEXT) buffer;
+				PacketType = (BTHX_HCI_PACKET_TYPE) HCIContext->Type; 
+				
+				
+				if (PacketType == 0x04) // HciPacketEvent
+				{				
+					UCHAR* Data = HCIContext->Data;
+					
+					UCHAR EventCode = Data[0];
+					UCHAR PayloadLength = Data[1];
+					
+					DbgPrint("Filter!%s!Complet HCI read type=%s EventCode=%s PayloadLength=0x%02X %s\n",deviceContext->Name, HciPacketTypeDesc(PacketType,info1,256), EventCodeDesc(EventCode,info2,256), PayloadLength, EventDecode(Data,info3,256));
+				}
+				else
+				{
+					DbgPrint("Filter!%s!Complet HCI read type=%s\n",deviceContext->Name, HciPacketTypeDesc(PacketType,info1,256));
+			}
+				
+				RtlStringCbCatA(logPrintBufferName, 256, "!HCI");
+			}
+			else if (IoControlCode == 0x41040F) // HCI write
+			{
+				RtlStringCbCatA(logPrintBufferName, 256, "!HCI");
+			}
+			
+			printBufferContent(buffer, OutputBufferLength, logPrintBufferName);
 		}
 	}
 	
@@ -1289,6 +1934,7 @@ FilterEvtIoDeviceControl(
 	size_t  bufSize = 0;
 	BTHX_HCI_PACKET_TYPE PacketType;
 	PBTHX_HCI_READ_WRITE_CONTEXT HCIContext;
+	CHAR logPrintBufferName[256];
 
     //DbgPrint("Filter!Begin FilterEvtIoDeviceControl\n");
 
@@ -1302,6 +1948,9 @@ FilterEvtIoDeviceControl(
 	
 	if (InputBufferLength > 0)
 	{
+		RtlZeroMemory(logPrintBufferName, 256);
+		RtlStringCbPrintfA(logPrintBufferName, 256, "%s", deviceContext->Name);
+		
 		status = WdfRequestRetrieveInputBuffer(Request, InputBufferLength, &buffer, &bufSize );
 		if (!NT_SUCCESS(status)) {
 			DbgPrint("Filter!%s!WdfRequestRetrieveInputBuffer failed: 0x%x\n", deviceContext->Name, status);
@@ -1310,12 +1959,14 @@ FilterEvtIoDeviceControl(
 			return;
 		}
 		
-		if (IoControlCode == 0x410413)
+		if (IoControlCode == 0x410413) // HCI read
 		{
 			PacketType = *((BTHX_HCI_PACKET_TYPE *) buffer);
 			DbgPrint("Filter!%s!Receive HCI read type=%s\n",deviceContext->Name, HciPacketTypeDesc(PacketType,info1,256));
+			
+			RtlStringCbCatA(logPrintBufferName, 256, "!HCI");
 		}
-		else if (IoControlCode == 0x41040F)
+		else if (IoControlCode == 0x41040F) // HCI write
 		{
 			HCIContext = (PBTHX_HCI_READ_WRITE_CONTEXT) buffer;
 			PacketType = (BTHX_HCI_PACKET_TYPE) HCIContext->Type; 
@@ -1332,15 +1983,17 @@ FilterEvtIoDeviceControl(
 				
 				UCHAR PayloadLength = Data[2];
 				
-				DbgPrint("Filter!%s!Receive HCI write type=%s OpCode=0x%04X OGF:OCF=%s PayloadLength=0x%01X\n",deviceContext->Name, HciPacketTypeDesc(PacketType,info1,256), OpCode, OGF_OCF_Desc(OGF,OCF,info2,256), PayloadLength);
+				DbgPrint("Filter!%s!Receive HCI write type=%s OpCode=0x%04X OGF:OCF=%s PayloadLength=0x%02X\n",deviceContext->Name, HciPacketTypeDesc(PacketType,info1,256), OpCode, OGF_OCF_Desc(OGF,OCF,info2,256), PayloadLength);
 			}
 			else
 			{
 				DbgPrint("Filter!%s!Receive HCI write type=%s\n",deviceContext->Name, HciPacketTypeDesc(PacketType,info1,256));
 			}
+			
+			RtlStringCbCatA(logPrintBufferName, 256, "!HCI");
 		}
 
-		printBufferContent(buffer, bufSize, deviceContext->Name);
+		printBufferContent(buffer, bufSize, logPrintBufferName);
 	}
 	
 	//FilterForwardRequest(Request, WdfDeviceGetIoTarget(device), deviceContext);
