@@ -1268,7 +1268,7 @@ CHAR* OGF_OCF_Desc(ULONG OGF, ULONG OCF,CHAR* buffer, size_t bufSize)
 		default:
 			RtlStringCbCatA(buffer, bufSize, "UNKNOWN:UNKNOWN");
 	}
-	RtlStringCbPrintfA(OGF_OCF_Value, 16, "(0x%02X:0x%04X) ", OGF, OCF);
+	RtlStringCbPrintfA(OGF_OCF_Value, 16, "(0x%02X:0x%04X)", OGF, OCF);
 	RtlStringCbCatA(buffer, bufSize, OGF_OCF_Value);
 
 	return buffer;
@@ -1333,7 +1333,9 @@ CHAR* EventDecode(UCHAR* Data, CHAR* buffer, size_t bufSize)
 	ULONG OCF;
 	CHAR info1[256];
 	CHAR info2[256];
+	CHAR startDesc[256];
 
+	// https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core-54/out/en/host-controller-interface/host-controller-interface-functional-specification.html
 	switch(EventCode)
 	{
 		case 0x0E:
@@ -1341,7 +1343,42 @@ CHAR* EventDecode(UCHAR* Data, CHAR* buffer, size_t bufSize)
 			OpCode += Data[3];
 			OGF = (OpCode >> 10) & 0x3F;			
 			OCF = OpCode & 0x3FF;
-			RtlStringCbPrintfA(buffer, bufSize, "Num_HCI_Command_Packets=0x%02X Command_Opcode=0x%04X (%s) Return_Parameters=%s", Data[2],OpCode,OGF_OCF_Desc(OGF,OCF,info1,256),ErrorCodeDesc(Data[5],info2,256));
+			RtlStringCbPrintfA(startDesc, 256, "Num_HCI_Command_Packets=0x%02X Command_Opcode=0x%04X (%s) Return_Parameters=%s", Data[2],OpCode,OGF_OCF_Desc(OGF,OCF,info1,256),ErrorCodeDesc(Data[5],info2,256));
+			switch(OpCode)
+			{
+				case 0x0C03: // RESET
+					RtlStringCbPrintfA(buffer, bufSize, "%s", startDesc);
+					break;
+				case 0x0C56: // WRITE_SIMPLE_PAIRING_MODE
+					RtlStringCbPrintfA(buffer, bufSize, "%s", startDesc);
+					break;					
+				case 0x0C57: // READ_LOCAL_OOB_DATA
+					RtlStringCbPrintfA(buffer, bufSize, "%s C=... R=...", startDesc);
+					break;					
+				case 0x0C58: // READ_INQUIRY_RESPONSE_TRANSMIT_POWER_LEVEL
+					RtlStringCbPrintfA(buffer, bufSize, "%s TX_Power=0x%02X", startDesc, Data[6]);
+					break;										
+				case 0x1001: // READ_LOCAL_VERSION_INFORMATION
+					RtlStringCbPrintfA(buffer, bufSize, "%s HCI_Version=0x%02X HCI_Subversion=0x%02X%02X LMP_Version=0x%02X Company_Identifier=0x%02X%02X LMP_Subversion=0x%02X%02X", startDesc, Data[6], Data[8],Data[7], Data[9], Data[11],Data[10], Data[13],Data[12]);
+					break;										
+				case 0x1002: // READ_LOCAL_SUPPORTED_COMMANDS
+					RtlStringCbPrintfA(buffer, bufSize, "%s Supported_Commands=...", startDesc);
+					break;					
+				case 0x1003: // READ_LOCAL_SUPPORTED_FEATURES
+					RtlStringCbPrintfA(buffer, bufSize, "%s LMP_Features=0x%02X%02X%02X%02X%02X%02X%02X%02X", startDesc, Data[13],Data[12],Data[11],Data[10],Data[9],Data[8],Data[7],Data[6]);
+					break;										
+				case 0x1005: // READ_BUFFER_SIZE
+					RtlStringCbPrintfA(buffer, bufSize, "%s ACL_Data_Packet_Length=0x%02X%02X Synchronous_Data_Packet_Length=0x%02X Total_Num_ACL_Data_Packets=0x%02X%02X Total_Num_Synchronous_Data_Packets=0x%02X%02X", startDesc, Data[7],Data[6], Data[8], Data[10],Data[9], Data[12],Data[11]);
+					break;										
+				case 0x1009: // READ_BD_ADDR
+					RtlStringCbPrintfA(buffer, bufSize, "%s BD_ADDR=%02X:%02X:%02X:%02X:%02X:%02X", startDesc, Data[11],Data[10],Data[9],Data[8],Data[7],Data[6]);
+					break;					
+				case 0x1804: // WRITE_SIMPLE_PAIRING_DEBUG_MODE
+					RtlStringCbPrintfA(buffer, bufSize, "%s", startDesc);
+					break;										
+				default:
+					RtlStringCbPrintfA(buffer, bufSize, "%s TODO", startDesc);
+			}
 			break;
 		default:
 			RtlStringCbPrintfA(buffer, bufSize, "TODO");
